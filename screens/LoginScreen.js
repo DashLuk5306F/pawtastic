@@ -11,16 +11,21 @@ export default function LoginScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const theme = useTheme();
 
+  const handleLogin = () => {
+    // Navegar directamente a Home sin autenticación
+    navigation.replace('Home');
+  };
+
   return (
     <KeyboardAvoidingView 
       style={[styles.container, { backgroundColor: theme.colors.primary }]} 
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.header}>
-        <Animatable.View animation="fadeInDown" duration={500} style={styles.logoContainer}>
+        <Animatable.View animation="fadeInDown" duration={1500} style={styles.logoContainer}>
           <Animatable.Image
             animation="bounceIn"
-            delay={300}
+            delay={500}
             duration={1500}
             source={require('../assets/app-icon.png')}
             style={styles.logo}
@@ -37,7 +42,7 @@ export default function LoginScreen({ navigation }) {
 
       <Animatable.View 
         animation="fadeInUpBig"
-        duration={500}
+        duration={1500}
         style={styles.footer}
       >
         <Surface style={styles.surface} elevation={2}>
@@ -69,17 +74,8 @@ export default function LoginScreen({ navigation }) {
           />
 
           <Button
-            mode="text"
-            onPress={() => {/* Implementar recuperación de contraseña */}}
-            style={styles.forgotPassword}
-            labelStyle={styles.forgotPasswordText}
-          >
-            ¿Olvidaste tu contraseña?
-          </Button>
-
-          <Button
             mode="contained"
-            onPress={() => navigation.navigate('Home')}
+            onPress={handleLogin}
             style={styles.button}
             contentStyle={styles.buttonContent}
             labelStyle={styles.buttonLabel}
@@ -148,13 +144,6 @@ const styles = StyleSheet.create({
   input: {
     marginBottom: 16,
     backgroundColor: 'transparent',
-  },
-  forgotPassword: {
-    alignSelf: 'flex-end',
-    marginBottom: 20,
-  },
-  forgotPasswordText: {
-    fontSize: 14,
   },
   button: {
     marginHorizontal: 30,

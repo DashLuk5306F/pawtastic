@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView, Dimensions } from 'react-native';
-import { TextInput, Button, Text, Surface, useTheme } from 'react-native-paper';
+import { TextInput, Button, Text, Surface, useTheme, Snackbar } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
 
 const { width } = Dimensions.get('window');
@@ -9,10 +9,26 @@ export default function RegisterScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [name, setName] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [error, setError] = useState('');
   const theme = useTheme();
+
+  const handleRegister = () => {
+    //Todo: Implementar la lógica de registro aquí (Dentro de comentarios)
+    // if (password !== confirmPassword) {
+    //   setError('Las contraseñas no coinciden');
+    //   return;
+    // }
+
+    // if (!email || !password) {
+    //   setError('Por favor, completa todos los campos');
+    //   return;
+    // }
+
+    // Navegar directamente a la pantalla de información personal
+    navigation.navigate('PersonalInfo');
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.primary }]}>
@@ -41,15 +57,6 @@ export default function RegisterScreen({ navigation }) {
       >
         <Surface style={styles.surface} elevation={2}>
           <ScrollView showsVerticalScrollIndicator={false}>
-            <TextInput
-              label="Nombre completo"
-              value={name}
-              onChangeText={setName}
-              mode="outlined"
-              left={<TextInput.Icon icon="account" />}
-              style={styles.input}
-            />
-
             <TextInput
               label="Email"
               value={email}
@@ -95,7 +102,7 @@ export default function RegisterScreen({ navigation }) {
 
             <Button
               mode="contained"
-              onPress={() => navigation.navigate('PersonalData')}
+              onPress={handleRegister}
               style={styles.button}
               contentStyle={styles.buttonContent}
               labelStyle={styles.buttonLabel}
@@ -114,6 +121,17 @@ export default function RegisterScreen({ navigation }) {
           </ScrollView>
         </Surface>
       </Animatable.View>
+
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError('')}
+        action={{
+          label: 'OK',
+          onPress: () => setError(''),
+        }}
+      >
+        {error}
+      </Snackbar>
     </View>
   );
 }
