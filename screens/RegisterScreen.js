@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView, Dimensions } from 'react-native';
 import { TextInput, Button, Text, Surface, useTheme, Snackbar } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
+import { registerUser } from '../firebase/auth-service';
 
 const { width } = Dimensions.get('window');
 
@@ -12,35 +13,51 @@ export default function RegisterScreen({ navigation }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const theme = useTheme();
 
-  const handleRegister = () => {
-    //Todo: Implementar la lógica de registro aquí (Dentro de comentarios)
-    // if (password !== confirmPassword) {
-    //   setError('Las contraseñas no coinciden');
-    //   return;
-    // }
+  const handleRegister = async () => {
+    if (password !== confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
 
-    // if (!email || !password) {
-    //   setError('Por favor, completa todos los campos');
-    //   return;
-    // }
+    if (!email || !password) {
+      setError('Por favor, completa todos los campos');
+      return;
+    }
 
-    // Navegar directamente a la pantalla de información personal
-    navigation.navigate('PersonalInfo');
+    setLoading(true);
+    try {
+      const { user, error: registerError } = await registerUser(email, password, {});
+      
+      if (registerError) {
+        setError(registerError);
+        return;
+      }
+
+      if (user) {
+        // Registro exitoso, navegar a la siguiente pantalla
+        navigation.navigate('PersonalInfo');
+      }
+    } catch (err) {
+      setError('Error al registrar el usuario');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.primary }]}>
       <Animatable.View 
-        animation="fadeInDown" 
-        duration={500} 
+        animation="fadeInDown"
+        duration={500}
         style={styles.header}
       >
         <Animatable.Image
           animation="bounceIn"
           delay={500}
-          duration={1500}
+          duration={500}
           source={require('../assets/app-icon.png')}
           style={styles.logo}
           resizeMode="contain"
@@ -52,7 +69,7 @@ export default function RegisterScreen({ navigation }) {
 
       <Animatable.View 
         animation="fadeInUpBig" 
-        duration={1000} 
+        duration={500} 
         style={styles.footer}
       >
         <Surface style={styles.surface} elevation={2}>
@@ -106,6 +123,7 @@ export default function RegisterScreen({ navigation }) {
               style={styles.button}
               contentStyle={styles.buttonContent}
               labelStyle={styles.buttonLabel}
+              loading={loading}
             >
               Registrarse
             </Button>

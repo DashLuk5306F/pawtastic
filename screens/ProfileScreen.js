@@ -3,7 +3,7 @@ import { StyleSheet, View, ScrollView } from 'react-native';
 import { Text, Surface, useTheme, Avatar, List, Button } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
 
-export default function ProfileScreen() {
+export default function ProfileScreen({ navigation }) {
   const theme = useTheme();
 
   return (
@@ -33,16 +33,19 @@ export default function ProfileScreen() {
               title="Editar Perfil"
               left={props => <List.Icon {...props} icon="account-edit" />}
               right={props => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => navigation.navigate('EditProfile')}
             />
             <List.Item
               title="Mis Mascotas"
               left={props => <List.Icon {...props} icon="paw" />}
               right={props => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => navigation.navigate('MyPets')}
             />
             <List.Item
               title="Historial de Servicios"
               left={props => <List.Icon {...props} icon="history" />}
               right={props => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => navigation.navigate('ServiceHistory')}
             />
           </List.Section>
 
@@ -52,21 +55,24 @@ export default function ProfileScreen() {
               title="Notificaciones"
               left={props => <List.Icon {...props} icon="bell" />}
               right={props => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => navigation.navigate('Notifications')}
             />
             <List.Item
               title="Privacidad"
               left={props => <List.Icon {...props} icon="shield-account" />}
               right={props => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => navigation.navigate('Privacy')}
             />
             <List.Item
               title="Ayuda y Soporte"
               left={props => <List.Icon {...props} icon="help-circle" />}
               right={props => <List.Icon {...props} icon="chevron-right" />}
+              onPress={() => navigation.navigate('HelpSupport')}
             />
           </List.Section>
 
           <Button
-            mode="outlined"
+            mode="contained"
             onPress={() => {}}
             style={styles.logoutButton}
             icon="logout"

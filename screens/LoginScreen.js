@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
-import { TextInput, Button, Text, Surface, useTheme } from 'react-native-paper';
+import { TextInput, Button, Text, Surface, useTheme, Snackbar } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
+import { loginUser } from '../firebase/auth-service';
 
 const { width } = Dimensions.get('window');
 
@@ -9,11 +10,34 @@ export default function LoginScreen({ navigation }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const theme = useTheme();
 
-  const handleLogin = () => {
-    // Navegar directamente a Home sin autenticación
-    navigation.replace('Home');
+  const handleLogin = async () => {
+    if (!email || !password) {
+      setError('Por favor, completa todos los campos');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { user, userData, error: loginError } = await loginUser(email, password);
+      
+      if (loginError) {
+        setError(loginError);
+        return;
+      }
+
+      if (user) {
+        // Login exitoso, navegar al Home
+        navigation.replace('Home');
+      }
+    } catch (err) {
+      setError('Error al iniciar sesión');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -22,11 +46,11 @@ export default function LoginScreen({ navigation }) {
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
     >
       <View style={styles.header}>
-        <Animatable.View animation="fadeInDown" duration={1500} style={styles.logoContainer}>
+        <Animatable.View animation="fadeInDown" duration={500} style={styles.logoContainer}>
           <Animatable.Image
             animation="bounceIn"
             delay={500}
-            duration={1500}
+            duration={500}
             source={require('../assets/app-icon.png')}
             style={styles.logo}
             resizeMode="contain"
@@ -42,7 +66,7 @@ export default function LoginScreen({ navigation }) {
 
       <Animatable.View 
         animation="fadeInUpBig"
-        duration={1500}
+        duration={500}
         style={styles.footer}
       >
         <Surface style={styles.surface} elevation={2}>
@@ -79,6 +103,7 @@ export default function LoginScreen({ navigation }) {
             style={styles.button}
             contentStyle={styles.buttonContent}
             labelStyle={styles.buttonLabel}
+            loading={loading}
           >
             Iniciar Sesión
           </Button>
@@ -97,6 +122,17 @@ export default function LoginScreen({ navigation }) {
           </View>
         </Surface>
       </Animatable.View>
+
+      <Snackbar
+        visible={!!error}
+        onDismiss={() => setError('')}
+        action={{
+          label: 'OK',
+          onPress: () => setError(''),
+        }}
+      >
+        {error}
+      </Snackbar>
     </KeyboardAvoidingView>
   );
 }

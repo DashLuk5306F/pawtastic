@@ -1,21 +1,60 @@
 import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
-import { Text, Surface, useTheme, TextInput, Button, SegmentedButtons, List } from 'react-native-paper';
+import { Text, Surface, useTheme, TextInput, Button, SegmentedButtons, List, Avatar } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
 
-export default function ServiceBookingScreen({ navigation }) {
+export default function ServiceBookingScreen({ navigation, route }) {
   const theme = useTheme();
-  const [service, setService] = useState('');
+  const serviceType = route.params?.serviceType || '';
+  const [service, setService] = useState(serviceType);
   const [date, setDate] = useState('');
   const [time, setTime] = useState('');
   const [petName, setPetName] = useState('');
   const [notes, setNotes] = useState('');
 
   const handleBooking = () => {
-    // Aquí iría la lógica para guardar la reserva
-    // Por ahora solo mostraremos un mensaje y volveremos a la pantalla anterior
     alert('¡Servicio agendado con éxito!');
     navigation.goBack();
+  };
+
+  const getServiceDetails = () => {
+    switch (service) {
+      case 'paseo':
+        return {
+          title: 'Paseo',
+          description: '30 minutos de paseo',
+          price: '15.00',
+          icon: 'walk'
+        };
+      case 'cuidado':
+        return {
+          title: 'Cuidado Diario',
+          description: 'Cuidado personalizado',
+          price: '25.00',
+          icon: 'paw'
+        };
+      case 'salud':
+        return {
+          title: 'Salud y Bienestar',
+          description: 'Consulta veterinaria',
+          price: '35.00',
+          icon: 'heart'
+        };
+      case 'alimentacion':
+        return {
+          title: 'Plan Nutricional',
+          description: 'Asesoría nutricional',
+          price: '30.00',
+          icon: 'food-variant'
+        };
+      default:
+        return {
+          title: 'Servicio',
+          description: 'Selecciona un servicio',
+          price: '0.00',
+          icon: 'clipboard'
+        };
+    }
   };
 
   return (
@@ -23,7 +62,7 @@ export default function ServiceBookingScreen({ navigation }) {
       <Surface style={[styles.header, { backgroundColor: theme.colors.primary }]} elevation={4}>
         <Animatable.View animation="fadeInDown" duration={1000} style={styles.headerContent}>
           <Text variant="headlineMedium" style={styles.headerText}>
-            Agendar Servicio
+            {getServiceDetails().title}
           </Text>
           <Text variant="titleMedium" style={styles.headerSubtext}>
             Reserva el mejor cuidado para tu mascota
@@ -40,10 +79,28 @@ export default function ServiceBookingScreen({ navigation }) {
             buttons={[
               { value: 'paseo', label: 'Paseo' },
               { value: 'cuidado', label: 'Cuidado' },
-              { value: 'veterinario', label: 'Veterinario' }
+              { value: 'salud', label: 'Salud' },
+              { value: 'alimentacion', label: 'Nutrición' }
             ]}
             style={styles.segmentedButton}
           />
+
+          <Surface style={[styles.serviceDetailCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
+            <Avatar.Icon 
+              size={40} 
+              icon={getServiceDetails().icon}
+              style={{ backgroundColor: theme.colors.primary + '20' }}
+              color={theme.colors.primary}
+            />
+            <View style={styles.serviceDetailContent}>
+              <Text variant="titleMedium" style={styles.serviceDetailTitle}>
+                {getServiceDetails().description}
+              </Text>
+              <Text variant="headlineSmall" style={[styles.serviceDetailPrice, { color: theme.colors.primary }]}>
+                ${getServiceDetails().price}
+              </Text>
+            </View>
+          </Surface>
 
           <TextInput
             label="Nombre de la Mascota"
@@ -159,5 +216,22 @@ const styles = StyleSheet.create({
   },
   buttonContent: {
     height: 48,
+  },
+  serviceDetailCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 15,
+    marginBottom: 20,
+    borderRadius: 10,
+  },
+  serviceDetailContent: {
+    marginLeft: 15,
+  },
+  serviceDetailTitle: {
+    fontWeight: 'bold',
+  },
+  serviceDetailPrice: {
+    fontWeight: 'bold',
+    marginTop: 5,
   },
 });

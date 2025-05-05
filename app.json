@@ -3,6 +3,7 @@
     "name": "pawtastic_52",
     "slug": "pawtastic_52",
     "version": "1.0.0",
+    "jsEngine": "hermes",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",

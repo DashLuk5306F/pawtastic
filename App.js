@@ -1,11 +1,14 @@
 import 'react-native-gesture-handler';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
-import { createStackNavigator } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { Provider as PaperProvider, MD3LightTheme } from 'react-native-paper';
+import { Provider as PaperProvider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import * as Animatable from 'react-native-animatable';
+import { AuthProvider } from './firebase/AuthContext';
+import { theme } from './theme';
 
 import PaginaInicial from './screens/PaginaInicial';
 import LoginScreen from './screens/LoginScreen';
@@ -16,25 +19,15 @@ import ProfileScreen from './screens/ProfileScreen';
 import ServiceBookingScreen from './screens/ServiceBookingScreen';
 import PersonalInfoScreen from './screens/PersonalInfoScreen';
 import PetRegisterScreen from './screens/PetRegisterScreen';
+import EditProfileScreen from './screens/EditProfileScreen';
+import MyPetsScreen from './screens/MyPetsScreen';
+import ServiceHistoryScreen from './screens/ServiceHistoryScreen';
+import NotificationsScreen from './screens/NotificationsScreen';
+import PrivacyScreen from './screens/PrivacyScreen';
+import HelpSupportScreen from './screens/HelpSupportScreen';
 
-const Stack = createStackNavigator();
+const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
-
-const theme = {
-  ...MD3LightTheme,
-  colors: {
-    ...MD3LightTheme.colors,
-    primary: '#705aa9',
-    secondary: '#9c8bc2',
-    accent: '#9c8bc2',
-    background: '#f6f6f6',
-    surface: '#ffffff',
-    elevation: {
-      level2: '#705aa920',
-      level3: '#705aa930',
-    },
-  },
-};
 
 function TabNavigator() {
   return (
@@ -52,14 +45,21 @@ function TabNavigator() {
             iconName = focused ? 'account' : 'account-outline';
           }
 
-          return <MaterialCommunityIcons name={iconName} size={size} color={color} />;
+          return (
+            <Animatable.View
+              animation={focused ? 'bounceIn' : undefined}
+              duration={500}
+            >
+              <MaterialCommunityIcons name={iconName} size={size} color={color} />
+            </Animatable.View>
+          );
         },
         tabBarActiveTintColor: theme.colors.primary,
         tabBarInactiveTintColor: 'gray',
         tabBarStyle: {
-          height: 60,
-          paddingBottom: 8,
-          paddingTop: 8,
+          height: 65,
+          paddingBottom: 10,
+          paddingTop: 10,
           backgroundColor: '#fff',
           borderTopWidth: 0,
           elevation: 20,
@@ -67,10 +67,13 @@ function TabNavigator() {
           shadowOffset: { width: 0, height: -3 },
           shadowOpacity: 0.1,
           shadowRadius: 4,
+          borderTopLeftRadius: 20,
+          borderTopRightRadius: 20,
         },
         tabBarLabelStyle: {
           fontSize: 12,
-          fontWeight: '500',
+          fontWeight: '600',
+          marginTop: 5,
         },
       })}
     >
@@ -84,25 +87,33 @@ function TabNavigator() {
 export default function App() {
   return (
     <PaperProvider theme={theme}>
-      <SafeAreaProvider>
-        <NavigationContainer>
-          <Stack.Navigator 
-            initialRouteName="Inicial"
-            screenOptions={{
-              headerShown: false,
-              cardStyle: { backgroundColor: '#fff' }
-            }}
-          >
-            <Stack.Screen name="Inicial" component={PaginaInicial} />
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
-            <Stack.Screen name="PetRegister" component={PetRegisterScreen} />
-            <Stack.Screen name="Home" component={TabNavigator} />
-            <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </SafeAreaProvider>
+      <AuthProvider>
+        <SafeAreaProvider>
+          <NavigationContainer>
+            <Stack.Navigator 
+              initialRouteName="Login"
+              screenOptions={{
+                headerShown: false,
+                cardStyle: { backgroundColor: '#fff' }
+              }}
+            >
+              <Stack.Screen name="Inicial" component={PaginaInicial} />
+              <Stack.Screen name="Login" component={LoginScreen} />
+              <Stack.Screen name="Register" component={RegisterScreen} />
+              <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
+              <Stack.Screen name="PetRegister" component={PetRegisterScreen} />
+              <Stack.Screen name="Home" component={TabNavigator} />
+              <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
+              <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+              <Stack.Screen name="MyPets" component={MyPetsScreen} />
+              <Stack.Screen name="ServiceHistory" component={ServiceHistoryScreen} />
+              <Stack.Screen name="Notifications" component={NotificationsScreen} />
+              <Stack.Screen name="Privacy" component={PrivacyScreen} />
+              <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
+            </Stack.Navigator>
+          </NavigationContainer>
+        </SafeAreaProvider>
+      </AuthProvider>
     </PaperProvider>
   );
 }

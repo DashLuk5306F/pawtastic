@@ -1,18 +1,29 @@
 import React from 'react';
-import { StyleSheet, View, ScrollView, Dimensions } from 'react-native';
+import { StyleSheet, View, ScrollView, Dimensions, Pressable } from 'react-native';
 import { Text, Surface, useTheme, Button, Avatar } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
 
 const { width } = Dimensions.get('window');
 
-const ServiceCard = ({ icon, title, description }) => {
+const ServiceCard = ({ icon, title, description, onPress }) => {
   const theme = useTheme();
   return (
     <Animatable.View animation="fadeInUp" duration={800}>
-      <Surface style={[styles.card, { backgroundColor: theme.colors.surface }]} elevation={2}>
-        <Avatar.Icon size={50} icon={icon} style={{ backgroundColor: theme.colors.primary }} />
-        <Text variant="titleMedium" style={styles.cardTitle}>{title}</Text>
-        <Text variant="bodyMedium" style={styles.cardDescription}>{description}</Text>
+      <Surface 
+        style={[styles.card, { backgroundColor: theme.colors.surface }]} 
+        elevation={2}
+      >
+        <Pressable 
+          onPress={onPress}
+          style={({ pressed }) => [
+            styles.cardContent,
+            { opacity: pressed ? 0.7 : 1 }
+          ]}
+        >
+          <Avatar.Icon size={50} icon={icon} style={{ backgroundColor: theme.colors.primary }} />
+          <Text variant="titleMedium" style={styles.cardTitle}>{title}</Text>
+          <Text variant="bodyMedium" style={styles.cardDescription}>{description}</Text>
+        </Pressable>
       </Surface>
     </Animatable.View>
   );
@@ -20,6 +31,10 @@ const ServiceCard = ({ icon, title, description }) => {
 
 export default function HomeScreen({ navigation }) {
   const theme = useTheme();
+
+  const handleServicePress = (serviceType) => {
+    navigation.navigate('ServiceBooking', { serviceType });
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -40,21 +55,25 @@ export default function HomeScreen({ navigation }) {
             icon="paw"
             title="Cuidado Diario"
             description="Servicios personalizados para el cuidado de tu mascota"
+            onPress={() => handleServicePress('cuidado')}
           />
           <ServiceCard
             icon="heart"
             title="Salud y Bienestar"
             description="Consejos y seguimiento de la salud de tu compañero"
+            onPress={() => handleServicePress('salud')}
           />
           <ServiceCard
             icon="walk"
             title="Paseos"
             description="Ejercicio y diversión garantizada para tu mascota"
+            onPress={() => handleServicePress('paseo')}
           />
           <ServiceCard
             icon="food-variant"
             title="Alimentación"
             description="Planes nutricionales adaptados a cada mascota"
+            onPress={() => handleServicePress('alimentacion')}
           />
         </View>
 
@@ -108,6 +127,9 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 15,
     marginBottom: 15,
+    alignItems: 'center',
+  },
+  cardContent: {
     alignItems: 'center',
   },
   cardTitle: {
