@@ -9,7 +9,7 @@ const ProductCard = ({ title, price, description, image }) => {
   return (
     <Animatable.View animation="fadeInUp" duration={800}>
       <Card style={styles.card}>
-        <Card.Cover source={require('../assets/app-icon.png')} />
+        <Card.Cover source={require('../../assets/app-icon.png')} />
         <Card.Content>
           <Text variant="titleMedium" style={styles.productTitle}>{title}</Text>
           <Text variant="bodyMedium" style={styles.description}>{description}</Text>

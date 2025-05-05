@@ -10,21 +10,30 @@ import * as Animatable from 'react-native-animatable';
 import { AuthProvider } from './firebase/AuthContext';
 import { theme } from './theme';
 
-import PaginaInicial from './screens/PaginaInicial';
-import LoginScreen from './screens/LoginScreen';
-import RegisterScreen from './screens/RegisterScreen';
-import HomeScreen from './screens/HomeScreen';
-import MarketScreen from './screens/MarketScreen';
-import ProfileScreen from './screens/ProfileScreen';
-import ServiceBookingScreen from './screens/ServiceBookingScreen';
-import PersonalInfoScreen from './screens/PersonalInfoScreen';
-import PetRegisterScreen from './screens/PetRegisterScreen';
-import EditProfileScreen from './screens/EditProfileScreen';
-import MyPetsScreen from './screens/MyPetsScreen';
-import ServiceHistoryScreen from './screens/ServiceHistoryScreen';
-import NotificationsScreen from './screens/NotificationsScreen';
-import PrivacyScreen from './screens/PrivacyScreen';
-import HelpSupportScreen from './screens/HelpSupportScreen';
+// Auth Screens
+import PaginaInicial from './screens/auth/PaginaInicial';
+import LoginScreen from './screens/auth/LoginScreen';
+import RegisterScreen from './screens/auth/RegisterScreen';
+import PersonalInfoScreen from './screens/auth/PersonalInfoScreen';
+
+// Main Screens
+import HomeScreen from './screens/main/HomeScreen';
+import MarketScreen from './screens/main/MarketScreen';
+
+// Profile Screens
+import ProfileScreen from './screens/profile/ProfileScreen';
+import EditProfileScreen from './screens/profile/EditProfileScreen';
+import MyPetsScreen from './screens/profile/MyPetsScreen';
+import PetRegisterScreen from './screens/profile/PetRegisterScreen';
+
+// Service Screens
+import ServiceBookingScreen from './screens/services/ServiceBookingScreen';
+import ServiceHistoryScreen from './screens/services/ServiceHistoryScreen';
+
+// Settings Screens
+import NotificationsScreen from './screens/settings/NotificationsScreen';
+import PrivacyScreen from './screens/settings/PrivacyScreen';
+import HelpSupportScreen from './screens/settings/HelpSupportScreen';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
