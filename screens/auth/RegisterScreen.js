@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView, Dimensions } from 'react-native';
 import { TextInput, Button, Text, Surface, useTheme, Snackbar } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
-import { registerUser } from '../firebase/auth-service';
+import { registerUser } from '../../firebase/auth-service';
 
 const { width } = Dimensions.get('window');
 
@@ -58,7 +58,7 @@ export default function RegisterScreen({ navigation }) {
           animation="bounceIn"
           delay={500}
           duration={500}
-          source={require('../assets/app-icon.png')}
+          source={require('../../assets/app-icon.png')}
           style={styles.logo}
           resizeMode="contain"
         />

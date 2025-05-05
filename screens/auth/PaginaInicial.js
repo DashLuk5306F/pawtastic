@@ -14,7 +14,7 @@ export default function PaginaInicial({ navigation }) {
         <Animatable.Image
           animation="bounceIn"
           duration={300}
-          source={require('../assets/app-icon.png')}
+          source={require('../../assets/app-icon.png')}
           style={styles.logo}
           resizeMode="contain"
         />
