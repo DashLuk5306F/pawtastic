@@ -9,6 +9,9 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Animatable from 'react-native-animatable';
 import { theme } from './theme';
+import app from './config/firebase';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import LoadingScreen from './components/LoadingScreen';
 
 // Auth Screens
 import PaginaInicial from './screens/auth/PaginaInicial';
@@ -99,36 +102,59 @@ const screenOptions = {
   animation: 'slide_from_right'
 };
 
+function Navigation() {
+  const { user, loading } = useAuth();
+
+  if (loading) {
+    return <LoadingScreen />;
+  }
+
+  return (
+    <Stack.Navigator 
+      initialRouteName={user ? "Home" : "Inicial"}
+      screenOptions={screenOptions} 
+    >
+      {!user ? (
+        // Rutas públicas
+        <>
+          <Stack.Screen 
+            name="Inicial" 
+            component={PaginaInicial}
+            options={{ animation: 'fade' }}
+          />
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
+        </>
+      ) : (
+        // Rutas protegidas
+        <>
+          <Stack.Screen name="Home" component={TabNavigator} />
+          <Stack.Screen name="PetRegister" component={PetRegisterScreen} />
+          <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
+          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+          <Stack.Screen name="MyPets" component={MyPetsScreen} />
+          <Stack.Screen name="ServiceHistory" component={ServiceHistoryScreen} />
+          <Stack.Screen name="Notifications" component={NotificationsScreen} />
+          <Stack.Screen name="Privacy" component={PrivacyScreen} />
+          <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
+        </>
+      )}
+    </Stack.Navigator>
+  );
+}
+
 export default function App() {
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
       <PaperProvider theme={theme}>
-        <SafeAreaProvider>
-          <NavigationContainer>
-            <Stack.Navigator 
-              initialRouteName="Inicial"
-              screenOptions={screenOptions}
-            >
-              <Stack.Screen 
-                name="Inicial" 
-                component={PaginaInicial}
-                options={{ animation: 'fade' }}
-              />
-              <Stack.Screen name="Login" component={LoginScreen} />
-              <Stack.Screen name="Register" component={RegisterScreen} />
-              <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
-              <Stack.Screen name="PetRegister" component={PetRegisterScreen} />
-              <Stack.Screen name="Home" component={TabNavigator} />
-              <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
-              <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-              <Stack.Screen name="MyPets" component={MyPetsScreen} />
-              <Stack.Screen name="ServiceHistory" component={ServiceHistoryScreen} />
-              <Stack.Screen name="Notifications" component={NotificationsScreen} />
-              <Stack.Screen name="Privacy" component={PrivacyScreen} />
-              <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
-            </Stack.Navigator>
-          </NavigationContainer>
-        </SafeAreaProvider>
+        <AuthProvider>
+          <SafeAreaProvider>
+            <NavigationContainer>
+              <Navigation />
+            </NavigationContainer>
+          </SafeAreaProvider>
+        </AuthProvider>
       </PaperProvider>
     </GestureHandlerRootView>
   );

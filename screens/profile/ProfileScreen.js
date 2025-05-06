@@ -2,22 +2,34 @@ import React from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
 import { Text, Surface, useTheme, Avatar, List, Button } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
+import { useAuth } from '../../context/AuthContext';
+import { authService } from '../../services/authService';
 
 export default function ProfileScreen({ navigation }) {
   const theme = useTheme();
+  const { user } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      // La navegación se manejará automáticamente por el AuthContext
+    } catch (error) {
+      console.error('Error al cerrar sesión:', error);
+    }
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Surface style={[styles.header, { backgroundColor: theme.colors.primary }]} elevation={4}>
         <Animatable.View animation="fadeInDown" duration={1000} style={styles.headerContent}>
-          <Avatar.Icon 
+          <Avatar.Text 
             size={100} 
-            icon="account"
+            label={user?.email?.[0].toUpperCase() || 'U'}
             style={[styles.avatar, { backgroundColor: theme.colors.surface }]}
             color={theme.colors.primary}
           />
           <Text variant="headlineMedium" style={styles.headerText}>
-            Usuario
+            {user?.email || 'Usuario'}
           </Text>
           <Text variant="titleMedium" style={styles.headerSubtext}>
             Amante de las mascotas
@@ -73,7 +85,7 @@ export default function ProfileScreen({ navigation }) {
 
           <Button
             mode="contained"
-            onPress={() => {}}
+            onPress={handleLogout}
             style={styles.logoutButton}
             icon="logout"
           >

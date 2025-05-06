@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { TextInput, Button, Text, Surface, useTheme, Snackbar } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
+import { authService } from '../../services/authService';
 
 const { width } = Dimensions.get('window');
 
@@ -21,13 +22,18 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      // TODO: Implementar lógica de autenticación sin Firebase
-      setTimeout(() => {
-        // Simulamos un login exitoso
-        navigation.replace('Home');
-      }, 1000);
+      await authService.login(email, password);
+      navigation.replace('Home');
     } catch (err) {
-      setError('Error al iniciar sesión');
+      let errorMessage = 'Error al iniciar sesión';
+      if (err.code === 'auth/user-not-found') {
+        errorMessage = 'No existe una cuenta con este email';
+      } else if (err.code === 'auth/wrong-password') {
+        errorMessage = 'Contraseña incorrecta';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Email inválido';
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }

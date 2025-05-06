@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView, Dimensions } from 'react-native';
 import { TextInput, Button, Text, Surface, useTheme, Snackbar } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
+import { authService } from '../../services/authService';
 
 const { width } = Dimensions.get('window');
 
@@ -28,13 +29,21 @@ export default function RegisterScreen({ navigation }) {
 
     setLoading(true);
     try {
-      // TODO: Implementar lógica de registro sin Firebase
-      setTimeout(() => {
-        // Simulamos un registro exitoso
-        navigation.navigate('PersonalInfo');
-      }, 1000);
+      await authService.register(email, password, {
+        email,
+        createdAt: new Date(),
+      });
+      navigation.replace('PersonalInfo');
     } catch (err) {
-      setError('Error al registrar el usuario');
+      let errorMessage = 'Error al registrar el usuario';
+      if (err.code === 'auth/email-already-in-use') {
+        errorMessage = 'Este email ya está registrado';
+      } else if (err.code === 'auth/invalid-email') {
+        errorMessage = 'Email inválido';
+      } else if (err.code === 'auth/weak-password') {
+        errorMessage = 'La contraseña debe tener al menos 6 caracteres';
+      }
+      setError(errorMessage);
     } finally {
       setLoading(false);
     }
