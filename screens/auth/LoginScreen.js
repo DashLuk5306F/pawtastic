@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { StyleSheet, View, KeyboardAvoidingView, Platform, Dimensions } from 'react-native';
 import { TextInput, Button, Text, Surface, useTheme, Snackbar } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
-import { loginUser } from '../../firebase/auth-service';
 
 const { width } = Dimensions.get('window');
 
@@ -22,17 +21,11 @@ export default function LoginScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const { user, userData, error: loginError } = await loginUser(email, password);
-      
-      if (loginError) {
-        setError(loginError);
-        return;
-      }
-
-      if (user) {
-        // Login exitoso, navegar al Home
+      // TODO: Implementar lógica de autenticación sin Firebase
+      setTimeout(() => {
+        // Simulamos un login exitoso
         navigation.replace('Home');
-      }
+      }, 1000);
     } catch (err) {
       setError('Error al iniciar sesión');
     } finally {

@@ -6,8 +6,8 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { Provider as PaperProvider } from 'react-native-paper';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Animatable from 'react-native-animatable';
-import { AuthProvider } from './firebase/AuthContext';
 import { theme } from './theme';
 
 // Auth Screens
@@ -93,20 +93,27 @@ function TabNavigator() {
   );
 }
 
+const screenOptions = {
+  headerShown: false,
+  cardStyle: { backgroundColor: '#fff' },
+  animation: 'slide_from_right'
+};
+
 export default function App() {
   return (
-    <PaperProvider theme={theme}>
-      <AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <PaperProvider theme={theme}>
         <SafeAreaProvider>
           <NavigationContainer>
             <Stack.Navigator 
-              initialRouteName="Login"
-              screenOptions={{
-                headerShown: false,
-                cardStyle: { backgroundColor: '#fff' }
-              }}
+              initialRouteName="Inicial"
+              screenOptions={screenOptions}
             >
-              <Stack.Screen name="Inicial" component={PaginaInicial} />
+              <Stack.Screen 
+                name="Inicial" 
+                component={PaginaInicial}
+                options={{ animation: 'fade' }}
+              />
               <Stack.Screen name="Login" component={LoginScreen} />
               <Stack.Screen name="Register" component={RegisterScreen} />
               <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
@@ -122,7 +129,7 @@ export default function App() {
             </Stack.Navigator>
           </NavigationContainer>
         </SafeAreaProvider>
-      </AuthProvider>
-    </PaperProvider>
+      </PaperProvider>
+    </GestureHandlerRootView>
   );
 }

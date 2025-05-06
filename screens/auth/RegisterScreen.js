@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView, Dimensions } from 'react-native';
 import { TextInput, Button, Text, Surface, useTheme, Snackbar } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
-import { registerUser } from '../../firebase/auth-service';
 
 const { width } = Dimensions.get('window');
 
@@ -29,17 +28,11 @@ export default function RegisterScreen({ navigation }) {
 
     setLoading(true);
     try {
-      const { user, error: registerError } = await registerUser(email, password, {});
-      
-      if (registerError) {
-        setError(registerError);
-        return;
-      }
-
-      if (user) {
-        // Registro exitoso, navegar a la siguiente pantalla
+      // TODO: Implementar lógica de registro sin Firebase
+      setTimeout(() => {
+        // Simulamos un registro exitoso
         navigation.navigate('PersonalInfo');
-      }
+      }, 1000);
     } catch (err) {
       setError('Error al registrar el usuario');
     } finally {
