@@ -1,18 +1,50 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import { Text, Surface, useTheme, TextInput, Button } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
+import { useAuth } from '../../context/AuthContext';
+import { doc, updateDoc, setDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
-export default function EditProfileScreen({ navigation }) {
+export default function EditProfileScreen({ navigation, route }) {
   const theme = useTheme();
-  const [nombre, setNombre] = useState('Usuario');
-  const [email, setEmail] = useState('usuario@example.com');
-  const [telefono, setTelefono] = useState('');
-  const [bio, setBio] = useState('Amante de las mascotas');
+  const { user } = useAuth();
+  const userData = route.params?.userData || {};
+  const [nombre, setNombre] = useState(userData?.nombre || '');
+  const [email, setEmail] = useState(userData?.email || user?.email || '');
+  const [telefono, setTelefono] = useState(userData?.telefono || '');
+  const [bio, setBio] = useState(userData?.bio || 'Amante de las mascotas');
+  const [loading, setLoading] = useState(false);
 
-  const handleGuardar = () => {
-    // Aquí iría la lógica para guardar los cambios
-    navigation.goBack();
+  const handleGuardar = async () => {
+    if (!user?.uid) {
+      Alert.alert('Error', 'No se puede guardar sin sesión iniciada');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Crear o actualizar el documento del usuario en Firestore
+      const userRef = doc(db, 'users', user.uid);
+
+      const userData = {
+        nombre,
+        email: user.email, // Usamos el email de Firebase Auth
+        telefono,
+        bio,
+        updatedAt: new Date()
+      };
+
+      await setDoc(userRef, userData, { merge: true });
+
+      Alert.alert('Éxito', 'Perfil actualizado correctamente');
+      navigation.goBack();
+    } catch (error) {
+      console.error('Error al guardar los datos:', error);
+      Alert.alert('Error', 'No se pudo actualizar el perfil');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -42,11 +74,10 @@ export default function EditProfileScreen({ navigation }) {
           <TextInput
             label="Email"
             value={email}
-            onChangeText={setEmail}
+            disabled={true}
             mode="outlined"
             style={styles.input}
             left={<TextInput.Icon icon="email" />}
-            keyboardType="email-address"
           />
 
           <TextInput
@@ -75,6 +106,8 @@ export default function EditProfileScreen({ navigation }) {
             onPress={handleGuardar}
             style={styles.button}
             icon="content-save"
+            loading={loading}
+            disabled={loading}
           >
             Guardar Cambios
           </Button>

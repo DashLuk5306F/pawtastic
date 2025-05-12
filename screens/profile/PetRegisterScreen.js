@@ -1,29 +1,95 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import { Text, Surface, useTheme, TextInput, Button, SegmentedButtons } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
-
+import { useAuth } from '../../context/AuthContext';
+import { doc, getDoc, updateDoc, arrayUnion, setDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 export default function PetRegisterScreen({ navigation, route }) {
   const theme = useTheme();
-  const datosPersonales = route.params?.datosPersonales;
+  const { user } = useAuth();
+  const isEditing = route.params?.isEditing || false;
+  const petData = route.params?.petData || {};
 
-  const [nombre, setNombre] = useState('');
-  const [edad, setEdad] = useState('');
-  const [tipo, setTipo] = useState('');
-  const [raza, setRaza] = useState('');
-  const [peso, setPeso] = useState('');
-  const [caracteristicas, setCaracteristicas] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [nombre, setNombre] = useState(petData.nombre || '');
+  const [edad, setEdad] = useState(petData.edad ? String(petData.edad) : '');
+  const [tipo, setTipo] = useState(petData.tipo || '');
+  const [raza, setRaza] = useState(petData.raza || '');
+  const [peso, setPeso] = useState(petData.peso ? String(petData.peso) : '');
+  const [caracteristicas, setCaracteristicas] = useState(petData.caracteristicas || '');
 
-  const handleRegistro = () => {
-    if (nombre && edad && tipo && raza) {
-      // Aquí iría la lógica para guardar los datos
-      // Por ahora solo mostraremos un mensaje y navegaremos al Home
-      alert('¡Registro completado con éxito!');
-      navigation.reset({
-        index: 0,
-        routes: [{ name: 'Home' }],
-      });
+  const handleRegistro = async () => {
+    if (!nombre || !edad || !tipo || !raza) {
+      Alert.alert('Error', 'Por favor completa todos los campos obligatorios');
+      return;
     }
+
+    if (!user?.uid) {
+      Alert.alert('Error', 'Debes iniciar sesión para registrar una mascota');
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const userDocRef = doc(db, 'users', user.uid);
+      const userDoc = await getDoc(userDocRef);
+      const newPetData = {
+        nombre,
+        edad,
+        tipo,
+        raza,
+        peso,
+          caracteristicas,
+          createdAt: new Date(),
+        updatedAt: new Date()
+        };
+
+      if (isEditing) {
+        // Si estamos editando, necesitamos actualizar la mascota existente
+        if (userDoc.exists() && userDoc.data().pets) {
+          const pets = userDoc.data().pets;
+          // Encontrar y actualizar la mascota con los mismos datos
+          const updatedPets = pets.map(pet => {
+            if (pet.nombre === petData.nombre &&
+                pet.raza === petData.raza &&
+                pet.tipo === petData.tipo) {
+              return newPetData;
+          }
+            return pet;
+          });
+
+          // Actualizar el array completo de mascotas
+          await updateDoc(userDocRef, { pets: updatedPets });
+        }
+      } else {
+        // Si es un nuevo registro
+        if (!userDoc.exists()) {
+          // Si el usuario no existe en Firestore, crea el documento
+          await setDoc(userDocRef, {
+            pets: [newPetData],
+            createdAt: new Date()
+          });
+        } else {
+          // Si el usuario ya existe, añade la mascota al array
+          await updateDoc(userDocRef, {
+            pets: arrayUnion(newPetData)
+          });
+        }
+      }
+
+      Alert.alert(
+        'Éxito',
+        isEditing ? '¡Mascota actualizada con éxito!' : '¡Mascota registrada con éxito!',
+        [{ text: 'OK', onPress: () => navigation.goBack() }]
+        );
+      } catch (error) {
+      console.error('Error al gestionar la mascota:', error);
+      Alert.alert('Error', 'No se pudo completar la operación. Inténtalo de nuevo.');
+    } finally {
+      setLoading(false);
+      }
   };
 
   return (
@@ -31,10 +97,10 @@ export default function PetRegisterScreen({ navigation, route }) {
       <Surface style={[styles.header, { backgroundColor: theme.colors.primary }]} elevation={4}>
         <Animatable.View animation="fadeInDown" duration={1000} style={styles.headerContent}>
           <Text variant="headlineMedium" style={styles.headerText}>
-            Registro de Mascota
+            {isEditing ? 'Editar Mascota' : 'Registro de Mascota'}
           </Text>
           <Text variant="titleMedium" style={styles.headerSubtext}>
-            Cuéntanos sobre tu compañero peludo
+            {isEditing ? 'Actualiza los datos de tu mascota' : 'Cuéntanos sobre tu compañero peludo'}
           </Text>
         </Animatable.View>
       </Surface>
@@ -54,7 +120,7 @@ export default function PetRegisterScreen({ navigation, route }) {
           />
 
           <TextInput
-            label="Nombre de la Mascota"
+            label="Nombre de la Mascota *"
             value={nombre}
             onChangeText={setNombre}
             mode="outlined"
@@ -63,7 +129,7 @@ export default function PetRegisterScreen({ navigation, route }) {
           />
 
           <TextInput
-            label="Edad (años)"
+            label="Edad (años) *"
             value={edad}
             onChangeText={setEdad}
             mode="outlined"
@@ -73,7 +139,7 @@ export default function PetRegisterScreen({ navigation, route }) {
           />
 
           <TextInput
-            label="Raza"
+            label="Raza *"
             value={raza}
             onChangeText={setRaza}
             mode="outlined"
@@ -107,10 +173,22 @@ export default function PetRegisterScreen({ navigation, route }) {
             onPress={handleRegistro}
             style={styles.button}
             contentStyle={styles.buttonContent}
-            disabled={!nombre || !edad || !tipo || !raza}
+            loading={loading}
+            disabled={loading || !nombre || !edad || !tipo || !raza}
           >
-            Completar Registro
+            {isEditing ? 'Guardar Cambios' : 'Completar Registro'}
           </Button>
+
+          {isEditing && (
+            <Button
+              mode="outlined"
+              onPress={() => navigation.goBack()}
+              style={styles.cancelButton}
+              contentStyle={styles.buttonContent}
+            >
+              Cancelar
+            </Button>
+          )}
         </Animatable.View>
       </ScrollView>
     </View>
@@ -156,6 +234,10 @@ const styles = StyleSheet.create({
   },
   button: {
     marginTop: 20,
+    marginBottom: 15,
+    borderRadius: 30,
+  },
+  cancelButton: {
     marginBottom: 30,
     borderRadius: 30,
   },

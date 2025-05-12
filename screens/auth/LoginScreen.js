@@ -23,9 +23,9 @@ export default function LoginScreen({ navigation }) {
     setLoading(true);
     try {
       await authService.login(email, password);
-      navigation.replace('Home');
+      navigation.replace('Home'); // Navega al TabNavigator
     } catch (err) {
-      let errorMessage = 'Error al iniciar sesión';
+      let errorMessage = 'Error al iniciar sesión, Verifique su conexión a internet';
       if (err.code === 'auth/user-not-found') {
         errorMessage = 'No existe una cuenta con este email';
       } else if (err.code === 'auth/wrong-password') {

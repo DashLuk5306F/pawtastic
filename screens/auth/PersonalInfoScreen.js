@@ -2,6 +2,9 @@ import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
 import { Text, Surface, useTheme, TextInput, Button } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
+import { getAuth } from 'firebase/auth';
+import { db } from '../../config/firebase'; // Asegúrate de importar tu configuración de Firebase
+import { doc, updateDoc } from 'firebase/firestore';
 
 export default function PersonalInfoScreen({ navigation }) {
   const theme = useTheme();
@@ -12,18 +15,29 @@ export default function PersonalInfoScreen({ navigation }) {
   const [ciudad, setCiudad] = useState('');
   const [codigoPostal, setCodigoPostal] = useState('');
 
-  const handleContinuar = () => {
-    // Navegar a la pantalla de registro de mascota con los datos personales (si los hay)
-    navigation.navigate('PetRegister', {
-      datosPersonales: {
+  const handleContinuar = async () => {
+
+    if (nombre && apellido && telefono && direccion && ciudad && codigoPostal) {
+      try{
+      const auth = getAuth();
+      const user = auth.currentUser; // Obtener el usuario actual
+      // Aquí puedes guardar los datos en Firestore si es necesario
+      const userRef = doc(db, 'users', user.uid); // Asegúrate de que 'user.uid' sea el ID del usuario actual
+      await updateDoc(userRef, {
         nombre,
         apellido,
         telefono,
         direccion,
         ciudad,
-        codigoPostal
-      }
-    });
+        codigoPostal,
+      });
+      navigation.navigate('PetRegister');
+    } catch (error) {
+      alert('Error al guardar la información personal: ' + error);
+    }
+    } else {
+      alert('Por favor, completa todos los campos antes de continuar.');
+    }
   };
 
   return (

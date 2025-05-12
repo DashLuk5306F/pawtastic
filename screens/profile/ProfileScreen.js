@@ -1,13 +1,43 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { StyleSheet, View, ScrollView } from 'react-native';
 import { Text, Surface, useTheme, Avatar, List, Button } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
 import { useAuth } from '../../context/AuthContext';
 import { authService } from '../../services/authService';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
 export default function ProfileScreen({ navigation }) {
   const theme = useTheme();
   const { user } = useAuth();
+  const [profileData, setProfileData] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  // Cargar los datos del usuario desde Firestore
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      if (!user?.uid) {
+        setLoading(false);
+        return;
+      }
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists()) {
+          setProfileData(userDoc.data());
+        } else {
+          console.log('No se encontró el documento del usuario');
+        }
+      } catch (error) {
+        console.error('Error al obtener datos del perfil:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, [user]);
 
   const handleLogout = async () => {
     try {
@@ -18,21 +48,29 @@ export default function ProfileScreen({ navigation }) {
     }
   };
 
+  // Obtener las iniciales para el avatar
+  const getInitials = () => {
+    if (profileData?.nombre) {
+      return profileData.nombre.charAt(0).toUpperCase();
+    }
+    return user?.email?.[0].toUpperCase() || 'U';
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
       <Surface style={[styles.header, { backgroundColor: theme.colors.primary }]} elevation={4}>
         <Animatable.View animation="fadeInDown" duration={1000} style={styles.headerContent}>
           <Avatar.Text 
             size={100} 
-            label={user?.email?.[0].toUpperCase() || 'U'}
+            label={getInitials()}
             style={[styles.avatar, { backgroundColor: theme.colors.surface }]}
             color={theme.colors.primary}
           />
           <Text variant="headlineMedium" style={styles.headerText}>
-            {user?.email || 'Usuario'}
+            {profileData?.nombre || user?.email || 'Usuario'}
           </Text>
           <Text variant="titleMedium" style={styles.headerSubtext}>
-            Amante de las mascotas
+            {profileData?.bio}
           </Text>
         </Animatable.View>
       </Surface>
@@ -43,10 +81,18 @@ export default function ProfileScreen({ navigation }) {
             <List.Subheader>Información Personal</List.Subheader>
             <List.Item
               title="Editar Perfil"
+              description={profileData?.email || user?.email}
               left={props => <List.Icon {...props} icon="account-edit" />}
               right={props => <List.Icon {...props} icon="chevron-right" />}
-              onPress={() => navigation.navigate('EditProfile')}
+              onPress={() => navigation.navigate('EditProfile', { userData: profileData })}
             />
+            {profileData?.telefono && (
+            <List.Item
+                title="Teléfono"
+                description={profileData.telefono}
+                left={props => <List.Icon {...props} icon="phone" />}
+            />
+            )}
             <List.Item
               title="Mis Mascotas"
               left={props => <List.Icon {...props} icon="paw" />}
@@ -60,7 +106,6 @@ export default function ProfileScreen({ navigation }) {
               onPress={() => navigation.navigate('ServiceHistory')}
             />
           </List.Section>
-
           <List.Section>
             <List.Subheader>Configuración</List.Subheader>
             <List.Item

@@ -110,36 +110,28 @@ function Navigation() {
   }
 
   return (
-    <Stack.Navigator 
+    <Stack.Navigator
+      //! Agregar 'user ? "Home" : "Inicial"' como operador ternario de la ruta principal de la navegación
       initialRouteName={user ? "Home" : "Inicial"}
-      screenOptions={screenOptions} 
+      screenOptions={screenOptions}
     >
-      {!user ? (
-        // Rutas públicas
-        <>
-          <Stack.Screen 
-            name="Inicial" 
-            component={PaginaInicial}
-            options={{ animation: 'fade' }}
-          />
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
-        </>
-      ) : (
-        // Rutas protegidas
-        <>
-          <Stack.Screen name="Home" component={TabNavigator} />
-          <Stack.Screen name="PetRegister" component={PetRegisterScreen} />
-          <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
-          <Stack.Screen name="EditProfile" component={EditProfileScreen} />
-          <Stack.Screen name="MyPets" component={MyPetsScreen} />
-          <Stack.Screen name="ServiceHistory" component={ServiceHistoryScreen} />
-          <Stack.Screen name="Notifications" component={NotificationsScreen} />
-          <Stack.Screen name="Privacy" component={PrivacyScreen} />
-          <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
-        </>
-      )}
+      <Stack.Screen
+        name="Inicial"
+        component={PaginaInicial}
+        options={{ animation: 'fade' }}
+      />
+      <Stack.Screen name="Login" component={LoginScreen} />
+      <Stack.Screen name="Register" component={RegisterScreen} />
+      <Stack.Screen name="PersonalInfo" component={PersonalInfoScreen} />
+      <Stack.Screen name="Home" component={TabNavigator} />
+      <Stack.Screen name="PetRegister" component={PetRegisterScreen} />
+      <Stack.Screen name="ServiceBooking" component={ServiceBookingScreen} />
+      <Stack.Screen name="EditProfile" component={EditProfileScreen} />
+      <Stack.Screen name="MyPets" component={MyPetsScreen} />
+      <Stack.Screen name="ServiceHistory" component={ServiceHistoryScreen} />
+      <Stack.Screen name="Notifications" component={NotificationsScreen} />
+      <Stack.Screen name="Privacy" component={PrivacyScreen} />
+      <Stack.Screen name="HelpSupport" component={HelpSupportScreen} />
     </Stack.Navigator>
   );
 }

@@ -1,23 +1,39 @@
-import React from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
-import { Text, Surface, useTheme, Card, Button, Avatar } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, ScrollView, ActivityIndicator } from 'react-native';
+import { Text, Surface, useTheme, Card, Button, Avatar, IconButton } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
+import { useAuth } from '../../context/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../config/firebase';
 
-const PetCard = ({ nombre, tipo, edad }) => {
+const PetCard = ({ pet, onEdit, onDelete }) => {
+  const tipoIcono = pet.tipo === 'perro' ? 'dog' : (pet.tipo === 'gato' ? 'cat' : 'paw');
+
   return (
     <Animatable.View animation="fadeInUp" duration={800}>
       <Card style={styles.card}>
         <Card.Content style={styles.cardContent}>
           <Avatar.Icon 
             size={60} 
-            icon={tipo === 'perro' ? 'dog' : 'cat'} 
+            icon={tipoIcono}
             style={styles.petAvatar}
           />
           <View style={styles.petInfo}>
-            <Text variant="titleMedium" style={styles.petName}>{nombre}</Text>
-            <Text variant="bodyMedium">{tipo} · {edad} años</Text>
+            <Text variant="titleMedium" style={styles.petName}>{pet.nombre}</Text>
+            <Text variant="bodyMedium">{pet.tipo} · {pet.edad} años</Text>
+            {pet.raza && <Text variant="bodySmall">Raza: {pet.raza}</Text>}
+            {pet.peso && <Text variant="bodySmall">Peso: {pet.peso} kg</Text>}
+          </View>
+          <View style={styles.actions}>
+            <IconButton icon="pencil" size={20} onPress={() => onEdit(pet)} />
+            <IconButton icon="delete" size={20} onPress={() => onDelete(pet)} />
           </View>
         </Card.Content>
+        {pet.caracteristicas && (
+          <Card.Actions style={styles.cardActions}>
+            <Text variant="bodySmall">{pet.caracteristicas}</Text>
+          </Card.Actions>
+        )}
       </Card>
     </Animatable.View>
   );
@@ -25,6 +41,61 @@ const PetCard = ({ nombre, tipo, edad }) => {
 
 export default function MyPetsScreen({ navigation }) {
   const theme = useTheme();
+  const { user } = useAuth();
+  const [pets, setPets] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchPets = async () => {
+      if (!user?.uid) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const userDocRef = doc(db, 'users', user.uid);
+        const userDoc = await getDoc(userDocRef);
+
+        if (userDoc.exists() && userDoc.data().pets) {
+          setPets(userDoc.data().pets);
+        } else {
+          setPets([]);
+        }
+      } catch (error) {
+        console.error('Error al obtener mascotas:', error);
+        setPets([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchPets();
+
+    // Agregar un listener para recargar los datos cuando regresemos a esta pantalla
+    const unsubscribe = navigation.addListener('focus', fetchPets);
+    return unsubscribe;
+  }, [user, navigation]);
+
+  const handleEditPet = (pet) => {
+    // Navegamos a la pantalla de edición con los datos de la mascota
+    navigation.navigate('PetRegister', { petData: pet, isEditing: true });
+  };
+
+  const handleDeletePet = (pet) => {
+    // Aquí implementarías la lógica para eliminar una mascota
+    alert('Función para eliminar mascota: ' + pet.nombre);
+    
+    // Implementación pendiente
+  };
+
+  if (loading) {
+    return (
+      <View style={[styles.container, styles.loadingContainer]}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+        <Text>Cargando mascotas...</Text>
+      </View>
+    );
+  }
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
@@ -40,9 +111,22 @@ export default function MyPetsScreen({ navigation }) {
       </Surface>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <PetCard nombre="Luna" tipo="perro" edad="3" />
-        <PetCard nombre="Michi" tipo="gato" edad="2" />
-        
+        {pets.length === 0 ? (
+          <Animatable.View animation="fadeIn" duration={1000} style={styles.emptyContainer}>
+            <Text style={styles.emptyText}>No tienes mascotas registradas</Text>
+            <Text style={styles.emptySubtext}>¡Registra a tu primer compañero peludo!</Text>
+          </Animatable.View>
+        ) : (
+          pets.map((pet, index) => (
+            <PetCard
+              key={index}
+              pet={pet}
+              onEdit={handleEditPet}
+              onDelete={handleDeletePet}
+            />
+          ))
+        )}
+
         <Animatable.View animation="fadeInUp" duration={1000} delay={400}>
           <Button
             mode="contained"
@@ -62,6 +146,10 @@ export default function MyPetsScreen({ navigation }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  loadingContainer: {
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   header: {
     paddingTop: 60,
@@ -104,6 +192,12 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 4,
   },
+  actions: {
+    flexDirection: 'row',
+  },
+  cardActions: {
+    paddingTop: 0,
+  },
   addButton: {
     marginTop: 10,
     marginBottom: 20,
@@ -111,5 +205,20 @@ const styles = StyleSheet.create({
   },
   buttonContent: {
     height: 48,
+  },
+  emptyContainer: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginTop: 50,
+    marginBottom: 30,
+  },
+  emptyText: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+  },
+  emptySubtext: {
+    fontSize: 14,
+    opacity: 0.7,
   },
 });

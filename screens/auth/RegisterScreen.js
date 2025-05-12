@@ -29,11 +29,11 @@ export default function RegisterScreen({ navigation }) {
 
     setLoading(true);
     try {
-      await authService.register(email, password, {
+      const idDoc = await authService.register(email, password, {
         email,
         createdAt: new Date(),
       });
-      navigation.replace('PersonalInfo');
+      navigation.replace('PersonalInfo', { userId: idDoc.id });
     } catch (err) {
       let errorMessage = 'Error al registrar el usuario';
       if (err.code === 'auth/email-already-in-use') {

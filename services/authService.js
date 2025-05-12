@@ -16,11 +16,12 @@ export const authService = {
       
       // Guardar información adicional del usuario en Firestore
       await setDoc(doc(db, 'users', uid), {
+        id: uid,
         ...userData,
         createdAt: serverTimestamp(),
       });
 
-      return { user: userCredential.user };
+      return { user: userCredential.user, id: uid };
     } catch (error) {
       throw error;
     }
@@ -55,3 +56,5 @@ export const authService = {
     return onAuthStateChanged(auth, callback);
   }
 };
+// Este servicio ha sido reemplazado por supabaseAuthService.js
+// Usar la nueva implementación que trabaja con Supabase
