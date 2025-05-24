@@ -7,7 +7,6 @@ const supabaseAnonKey = Constants.expoConfig.extra.supabaseAnonKey;
 if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Faltan las credenciales de Supabase. Por favor, verifica tu configuración.');
 }
-
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 export default supabase;
