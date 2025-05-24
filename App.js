@@ -1,4 +1,5 @@
 import 'react-native-gesture-handler';
+import 'react-native-url-polyfill/auto';
 import React from 'react';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
@@ -9,7 +10,8 @@ import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import * as Animatable from 'react-native-animatable';
 import { theme } from './theme';
-import app from './config/firebase';
+import 'react-native-url-polyfill/auto';
+import { supabase } from './config/supabase';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import LoadingScreen from './components/LoadingScreen';
 

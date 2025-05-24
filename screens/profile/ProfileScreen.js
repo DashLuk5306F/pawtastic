@@ -3,9 +3,8 @@ import { StyleSheet, View, ScrollView } from 'react-native';
 import { Text, Surface, useTheme, Avatar, List, Button } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
 import { useAuth } from '../../context/AuthContext';
-import { authService } from '../../services/authService';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabaseAuthService } from '../../services/supabaseAuthService';
+import { supabase } from '../../config/supabase';
 
 export default function ProfileScreen({ navigation }) {
   const theme = useTheme();
@@ -13,36 +12,63 @@ export default function ProfileScreen({ navigation }) {
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Cargar los datos del usuario desde Firestore
+  // Cargar los datos del usuario desde Supabase
   useEffect(() => {
-    const fetchUserProfile = async () => {
-      if (!user?.uid) {
+    let subscription;
+
+    const loadProfile = async () => {
+      if (!user?.id) {
         setLoading(false);
         return;
       }
-      try {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
 
-        if (userDoc.exists()) {
-          setProfileData(userDoc.data());
-        } else {
-          console.log('No se encontró el documento del usuario');
+      try {
+        // Obtener datos del perfil
+        const { data, error } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error) throw error;
+
+        if (data) {
+          setProfileData(data);
+          console.log('Datos del perfil cargados:', data);
         }
+
+        // Suscribirse a cambios en tiempo real
+        subscription = supabase
+          .channel('profiles')
+          .on('postgres_changes', 
+            { event: '*', schema: 'public', table: 'profiles', filter: `id=eq.${user.id}` },
+            payload => {
+              console.log('Cambio en perfil detectado:', payload);
+              setProfileData(payload.new);
+            }
+          )
+          .subscribe();
+
       } catch (error) {
-        console.error('Error al obtener datos del perfil:', error);
+        console.error('Error al cargar el perfil:', error.message);
       } finally {
         setLoading(false);
       }
     };
 
-    fetchUserProfile();
+    loadProfile();
+
+    // Limpieza al desmontar
+    return () => {
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
+    };
   }, [user]);
 
   const handleLogout = async () => {
     try {
-      await authService.logout();
-      // La navegación se manejará automáticamente por el AuthContext
+      await supabaseAuthService.logout();
     } catch (error) {
       console.error('Error al cerrar sesión:', error);
     }
@@ -51,7 +77,9 @@ export default function ProfileScreen({ navigation }) {
   // Obtener las iniciales para el avatar
   const getInitials = () => {
     if (profileData?.nombre) {
-      return profileData.nombre.charAt(0).toUpperCase();
+      const firstName = profileData.nombre.charAt(0);
+      const lastName = profileData.apellido ? profileData.apellido.charAt(0) : '';
+      return (firstName + lastName).toUpperCase();
     }
     return user?.email?.[0].toUpperCase() || 'U';
   };
@@ -67,10 +95,10 @@ export default function ProfileScreen({ navigation }) {
             color={theme.colors.primary}
           />
           <Text variant="headlineMedium" style={styles.headerText}>
-            {profileData?.nombre || user?.email || 'Usuario'}
+            {profileData ? `${profileData.nombre} ${profileData.apellido || ''}`.trim() : user?.email || 'Usuario'}
           </Text>
           <Text variant="titleMedium" style={styles.headerSubtext}>
-            {profileData?.bio}
+            {user?.email}
           </Text>
         </Animatable.View>
       </Surface>
@@ -81,17 +109,24 @@ export default function ProfileScreen({ navigation }) {
             <List.Subheader>Información Personal</List.Subheader>
             <List.Item
               title="Editar Perfil"
-              description={profileData?.email || user?.email}
+              description={user?.email}
               left={props => <List.Icon {...props} icon="account-edit" />}
               right={props => <List.Icon {...props} icon="chevron-right" />}
               onPress={() => navigation.navigate('EditProfile', { userData: profileData })}
             />
             {profileData?.telefono && (
-            <List.Item
+              <List.Item
                 title="Teléfono"
                 description={profileData.telefono}
                 left={props => <List.Icon {...props} icon="phone" />}
-            />
+              />
+            )}
+            {(profileData?.direccion || profileData?.ciudad) && (
+              <List.Item
+                title="Dirección"
+                description={`${profileData.direccion || ''}\n${profileData.ciudad || ''} ${profileData.codigo_postal || ''}`}
+                left={props => <List.Icon {...props} icon="map-marker" />}
+              />
             )}
             <List.Item
               title="Mis Mascotas"
@@ -106,6 +141,7 @@ export default function ProfileScreen({ navigation }) {
               onPress={() => navigation.navigate('ServiceHistory')}
             />
           </List.Section>
+
           <List.Section>
             <List.Subheader>Configuración</List.Subheader>
             <List.Item
@@ -175,5 +211,12 @@ const styles = StyleSheet.create({
     margin: 20,
     borderRadius: 30,
     borderWidth: 2,
+  },
+  offlineText: {
+    textAlign: 'center',
+    backgroundColor: '#FFE58F',
+    padding: 8,
+    marginBottom: 10,
+    borderRadius: 4,
   },
 });

@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
+import { StyleSheet, View, ScrollView, Alert } from 'react-native';
 import { Text, Surface, useTheme, TextInput, Button } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
-import { getAuth } from 'firebase/auth';
-import { db } from '../../config/firebase'; // Asegúrate de importar tu configuración de Firebase
-import { doc, updateDoc } from 'firebase/firestore';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../config/supabase';
 
 export default function PersonalInfoScreen({ navigation }) {
   const theme = useTheme();
+  const { user } = useAuth();
   const [nombre, setNombre] = useState('');
   const [apellido, setApellido] = useState('');
   const [telefono, setTelefono] = useState('');
@@ -16,27 +16,31 @@ export default function PersonalInfoScreen({ navigation }) {
   const [codigoPostal, setCodigoPostal] = useState('');
 
   const handleContinuar = async () => {
-
     if (nombre && apellido && telefono && direccion && ciudad && codigoPostal) {
-      try{
-      const auth = getAuth();
-      const user = auth.currentUser; // Obtener el usuario actual
-      // Aquí puedes guardar los datos en Firestore si es necesario
-      const userRef = doc(db, 'users', user.uid); // Asegúrate de que 'user.uid' sea el ID del usuario actual
-      await updateDoc(userRef, {
-        nombre,
-        apellido,
-        telefono,
-        direccion,
-        ciudad,
-        codigoPostal,
-      });
-      navigation.navigate('PetRegister');
-    } catch (error) {
-      alert('Error al guardar la información personal: ' + error);
-    }
+      try {
+        const { error } = await supabase
+          .from('profiles')
+          .upsert({
+            id: user.id,
+            nombre,
+            apellido,
+            telefono,
+            direccion,
+            ciudad,
+            codigo_postal: codigoPostal,
+            email: user.email,
+            updated_at: new Date().toISOString(),
+          });
+
+        if (error) throw error;
+        
+        navigation.navigate('PetRegister');
+      } catch (error) {
+        console.error('Error al guardar información personal:', error);
+        Alert.alert('Error', 'No se pudo guardar la información');
+      }
     } else {
-      alert('Por favor, completa todos los campos antes de continuar.');
+      Alert.alert('Error', 'Por favor, completa todos los campos antes de continuar.');
     }
   };
 

@@ -1,89 +1,96 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { StyleSheet, View, ScrollView, Alert } from 'react-native';
-import { Text, Surface, useTheme, TextInput, Button } from 'react-native-paper';
+import { TextInput, Button, Text, useTheme } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
 import { useAuth } from '../../context/AuthContext';
-import { doc, updateDoc, setDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 
-export default function EditProfileScreen({ navigation, route }) {
+export default function EditProfileScreen({ route, navigation }) {
   const theme = useTheme();
   const { user } = useAuth();
-  const userData = route.params?.userData || {};
-  const [nombre, setNombre] = useState(userData?.nombre || '');
-  const [email, setEmail] = useState(userData?.email || user?.email || '');
-  const [telefono, setTelefono] = useState(userData?.telefono || '');
-  const [bio, setBio] = useState(userData?.bio || 'Amante de las mascotas');
+  const { userData } = route.params || {};
   const [loading, setLoading] = useState(false);
 
-  const handleGuardar = async () => {
-    if (!user?.uid) {
-      Alert.alert('Error', 'No se puede guardar sin sesión iniciada');
+  const [formData, setFormData] = useState({
+    nombre: userData?.nombre || '',
+    apellido: userData?.apellido || '',
+    telefono: userData?.telefono || '',
+    direccion: userData?.direccion || '',
+    ciudad: userData?.ciudad || '',
+    codigo_postal: userData?.codigo_postal || '',
+  });
+
+  const handleUpdateProfile = async () => {
+    if (!formData.nombre || !formData.apellido) {
+      Alert.alert('Error', 'Por favor, completa al menos nombre y apellido');
       return;
     }
 
     setLoading(true);
     try {
-      // Crear o actualizar el documento del usuario en Firestore
-      const userRef = doc(db, 'users', user.uid);
+      const { error } = await supabase
+        .from('profiles')
+        .update({
+          ...formData,
+          updated_at: new Date().toISOString(),
+        })
+        .eq('id', user.id);
 
-      const userData = {
-        nombre,
-        email: user.email, // Usamos el email de Firebase Auth
-        telefono,
-        bio,
-        updatedAt: new Date()
-      };
+      if (error) throw error;
 
-      await setDoc(userRef, userData, { merge: true });
-
-      Alert.alert('Éxito', 'Perfil actualizado correctamente');
-      navigation.goBack();
+      Alert.alert('Éxito', 'Perfil actualizado correctamente', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
     } catch (error) {
-      console.error('Error al guardar los datos:', error);
+      console.error('Error al actualizar perfil:', error);
       Alert.alert('Error', 'No se pudo actualizar el perfil');
     } finally {
       setLoading(false);
     }
   };
 
+  const handleChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Surface style={[styles.header, { backgroundColor: theme.colors.primary }]} elevation={4}>
-        <Animatable.View animation="fadeInDown" duration={1000} style={styles.headerContent}>
-          <Text variant="headlineMedium" style={styles.headerText}>
-            Editar Perfil
-          </Text>
-          <Text variant="titleMedium" style={styles.headerSubtext}>
-            Actualiza tu información personal
-          </Text>
-        </Animatable.View>
-      </Surface>
+      <Animatable.View animation="fadeInDown" duration={1000} style={styles.header}>
+        <Text variant="headlineMedium" style={styles.headerText}>
+          Editar Perfil
+        </Text>
+        <Text variant="titleMedium" style={styles.headerSubtext}>
+          Actualiza tu información personal
+        </Text>
+      </Animatable.View>
 
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <Animatable.View animation="fadeInUp" duration={1000}>
           <TextInput
             label="Nombre"
-            value={nombre}
-            onChangeText={setNombre}
+            value={formData.nombre}
+            onChangeText={value => handleChange('nombre', value)}
             mode="outlined"
             style={styles.input}
             left={<TextInput.Icon icon="account" />}
           />
 
           <TextInput
-            label="Email"
-            value={email}
-            disabled={true}
+            label="Apellido"
+            value={formData.apellido}
+            onChangeText={value => handleChange('apellido', value)}
             mode="outlined"
             style={styles.input}
-            left={<TextInput.Icon icon="email" />}
+            left={<TextInput.Icon icon="account" />}
           />
 
           <TextInput
             label="Teléfono"
-            value={telefono}
-            onChangeText={setTelefono}
+            value={formData.telefono}
+            onChangeText={value => handleChange('telefono', value)}
             mode="outlined"
             style={styles.input}
             left={<TextInput.Icon icon="phone" />}
@@ -91,19 +98,36 @@ export default function EditProfileScreen({ navigation, route }) {
           />
 
           <TextInput
-            label="Biografía"
-            value={bio}
-            onChangeText={setBio}
+            label="Dirección"
+            value={formData.direccion}
+            onChangeText={value => handleChange('direccion', value)}
             mode="outlined"
             style={styles.input}
-            multiline
-            numberOfLines={4}
-            left={<TextInput.Icon icon="text" />}
+            left={<TextInput.Icon icon="home" />}
+          />
+
+          <TextInput
+            label="Ciudad"
+            value={formData.ciudad}
+            onChangeText={value => handleChange('ciudad', value)}
+            mode="outlined"
+            style={styles.input}
+            left={<TextInput.Icon icon="city" />}
+          />
+
+          <TextInput
+            label="Código Postal"
+            value={formData.codigo_postal}
+            onChangeText={value => handleChange('codigo_postal', value)}
+            mode="outlined"
+            style={styles.input}
+            left={<TextInput.Icon icon="zip-box" />}
+            keyboardType="numeric"
           />
 
           <Button
             mode="contained"
-            onPress={handleGuardar}
+            onPress={handleUpdateProfile}
             style={styles.button}
             icon="content-save"
             loading={loading}
@@ -126,18 +150,18 @@ const styles = StyleSheet.create({
     paddingBottom: 30,
     borderBottomLeftRadius: 30,
     borderBottomRightRadius: 30,
-  },
-  headerContent: {
-    alignItems: 'center',
+    backgroundColor: '#6200ee',
   },
   headerText: {
     color: '#fff',
     fontWeight: 'bold',
     marginBottom: 8,
+    textAlign: 'center',
   },
   headerSubtext: {
     color: '#fff',
     opacity: 0.9,
+    textAlign: 'center',
   },
   content: {
     flex: 1,

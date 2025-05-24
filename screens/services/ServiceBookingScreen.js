@@ -1,237 +1,305 @@
-import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
-import { Text, Surface, useTheme, TextInput, Button, SegmentedButtons, List, Avatar } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, ScrollView, Alert, Platform } from 'react-native';
+import { Text, TextInput, Button, useTheme, SegmentedButtons, Card, Portal, Modal } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../config/supabase';
 
-export default function ServiceBookingScreen({ navigation, route }) {
+export default function ServiceBookingScreen({ navigation }) {
   const theme = useTheme();
-  const serviceType = route.params?.serviceType || '';
-  const [service, setService] = useState(serviceType);
-  const [date, setDate] = useState('');
-  const [time, setTime] = useState('');
-  const [petName, setPetName] = useState('');
+  const { user } = useAuth();
+  const [pets, setPets] = useState([]);
+  const [selectedPet, setSelectedPet] = useState(null);
+  const [serviceType, setServiceType] = useState('');
+  const [date, setDate] = useState(new Date());
   const [notes, setNotes] = useState('');
+  const [loading, setLoading] = useState(false);
+  const [showDateModal, setShowDateModal] = useState(false);
 
-  const handleBooking = () => {
-    alert('¡Servicio agendado con éxito!');
-    navigation.goBack();
-  };
+  useEffect(() => {
+    const loadPets = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('pets')
+          .select('*')
+          .eq('owner_id', user.id);
 
-  const getServiceDetails = () => {
-    switch (service) {
-      case 'paseo':
-        return {
-          title: 'Paseo',
-          description: '30 minutos de paseo',
-          price: '15.00',
-          icon: 'walk'
-        };
-      case 'cuidado':
-        return {
-          title: 'Cuidado Diario',
-          description: 'Cuidado personalizado',
-          price: '25.00',
-          icon: 'paw'
-        };
-      case 'salud':
-        return {
-          title: 'Salud y Bienestar',
-          description: 'Consulta veterinaria',
-          price: '35.00',
-          icon: 'heart'
-        };
-      case 'alimentacion':
-        return {
-          title: 'Plan Nutricional',
-          description: 'Asesoría nutricional',
-          price: '30.00',
-          icon: 'food-variant'
-        };
-      default:
-        return {
-          title: 'Servicio',
-          description: 'Selecciona un servicio',
-          price: '0.00',
-          icon: 'clipboard'
-        };
+        if (error) throw error;
+        setPets(data || []);
+        
+        if (data && data.length > 0) {
+          setSelectedPet(data[0].id);
+        }
+      } catch (error) {
+        console.error('Error al cargar mascotas:', error);
+        Alert.alert('Error', 'No se pudieron cargar tus mascotas');
+      }
+    };
+
+    loadPets();
+  }, [user]);
+
+  const handleBookService = async () => {
+    if (!selectedPet || !serviceType || !date) {
+      Alert.alert('Error', 'Por favor completa todos los campos requeridos');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const { error } = await supabase
+        .from('services')
+        .insert([
+          {
+            user_id: user.id,
+            pet_id: selectedPet,
+            tipo_servicio: serviceType,
+            fecha: date.toISOString(),
+            estado: 'pendiente',
+            notas: notes,
+            created_at: new Date().toISOString(),
+          }
+        ]);
+
+      if (error) throw error;
+
+      Alert.alert(
+        'Éxito',
+        'Servicio reservado correctamente',
+        [
+          {
+            text: 'OK',
+            onPress: () => navigation.navigate('ServiceHistory')
+          }
+        ]
+      );
+    } catch (error) {
+      console.error('Error al reservar servicio:', error);
+      Alert.alert('Error', 'No se pudo reservar el servicio');
+    } finally {
+      setLoading(false);
     }
   };
 
-  return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Surface style={[styles.header, { backgroundColor: theme.colors.primary }]} elevation={4}>
-        <Animatable.View animation="fadeInDown" duration={1000} style={styles.headerContent}>
-          <Text variant="headlineMedium" style={styles.headerText}>
-            {getServiceDetails().title}
+  const serviceTypes = [
+    { value: 'paseo', label: 'Paseo' },
+    { value: 'peluqueria', label: 'Peluquería' },
+    { value: 'veterinaria', label: 'Veterinaria' },
+    { value: 'guarderia', label: 'Guardería' }
+  ];
+
+  // Función para seleccionar una fecha
+  const selectDate = (newDate) => {
+    const currentDate = newDate || date;
+    const now = new Date();
+    
+    // Si la fecha seleccionada es anterior a hoy, usar hoy
+    if (currentDate < now) {
+      setDate(now);
+    } else {
+      setDate(currentDate);
+    }
+    setShowDateModal(false);
+  };
+
+  const DatePickerModal = () => (
+    <Portal>
+      <Modal
+        visible={showDateModal}
+        onDismiss={() => setShowDateModal(false)}
+        contentContainerStyle={styles.modalContainer}
+      >
+        <View style={styles.datePickerContainer}>
+          <Text variant="titleMedium" style={styles.modalTitle}>
+            Seleccionar Fecha
           </Text>
-          <Text variant="titleMedium" style={styles.headerSubtext}>
-            Reserva el mejor cuidado para tu mascota
-          </Text>
-        </Animatable.View>
-      </Surface>
+          <ScrollView>
+            {[...Array(30)].map((_, index) => {
+              const dateOption = new Date();
+              dateOption.setDate(dateOption.getDate() + index);
+              const isSelected = date.toDateString() === dateOption.toDateString();
 
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <Animatable.View animation="fadeInUp" duration={1000}>
-          <Text variant="titleMedium" style={styles.sectionTitle}>Tipo de Servicio</Text>
-          <SegmentedButtons
-            value={service}
-            onValueChange={setService}
-            buttons={[
-              { value: 'paseo', label: 'Paseo' },
-              { value: 'cuidado', label: 'Cuidado' },
-              { value: 'salud', label: 'Salud' },
-              { value: 'alimentacion', label: 'Nutrición' }
-            ]}
-            style={styles.segmentedButton}
-          />
-
-          <Surface style={[styles.serviceDetailCard, { backgroundColor: theme.colors.surface }]} elevation={1}>
-            <Avatar.Icon 
-              size={40} 
-              icon={getServiceDetails().icon}
-              style={{ backgroundColor: theme.colors.primary + '20' }}
-              color={theme.colors.primary}
-            />
-            <View style={styles.serviceDetailContent}>
-              <Text variant="titleMedium" style={styles.serviceDetailTitle}>
-                {getServiceDetails().description}
-              </Text>
-              <Text variant="headlineSmall" style={[styles.serviceDetailPrice, { color: theme.colors.primary }]}>
-                ${getServiceDetails().price}
-              </Text>
-            </View>
-          </Surface>
-
-          <TextInput
-            label="Nombre de la Mascota"
-            value={petName}
-            onChangeText={setPetName}
-            mode="outlined"
-            style={styles.input}
-          />
-
-          <TextInput
-            label="Fecha"
-            value={date}
-            onChangeText={setDate}
-            mode="outlined"
-            placeholder="DD/MM/YYYY"
-            style={styles.input}
-          />
-
-          <TextInput
-            label="Hora"
-            value={time}
-            onChangeText={setTime}
-            mode="outlined"
-            placeholder="HH:MM"
-            style={styles.input}
-          />
-
-          <TextInput
-            label="Notas Adicionales"
-            value={notes}
-            onChangeText={setNotes}
-            mode="outlined"
-            multiline
-            numberOfLines={4}
-            style={styles.input}
-          />
-
-          <List.Section>
-            <List.Subheader>Precios Estimados</List.Subheader>
-            <List.Item
-              title="Paseo"
-              description="30 minutos - $15"
-              left={props => <List.Icon {...props} icon="walk" />}
-            />
-            <List.Item
-              title="Cuidado Diario"
-              description="Por día - $25"
-              left={props => <List.Icon {...props} icon="paw" />}
-            />
-            <List.Item
-              title="Consulta Veterinaria"
-              description="Básica - $35"
-              left={props => <List.Icon {...props} icon="medical-bag" />}
-            />
-          </List.Section>
-
+              return (
+                <Button
+                  key={index}
+                  mode={isSelected ? "contained" : "outlined"}
+                  onPress={() => selectDate(dateOption)}
+                  style={styles.dateOption}
+                >
+                  {dateOption.toLocaleDateString('es-ES', {
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                  })}
+                </Button>
+              );
+            })}
+          </ScrollView>
           <Button
             mode="contained"
-            onPress={handleBooking}
-            style={styles.button}
-            contentStyle={styles.buttonContent}
-            disabled={!service || !date || !time || !petName}
+            onPress={() => setShowDateModal(false)}
+            style={styles.closeButton}
           >
-            Confirmar Reserva
+            Cerrar
           </Button>
-        </Animatable.View>
-      </ScrollView>
-    </View>
+        </View>
+      </Modal>
+    </Portal>
+  );
+
+  return (
+    <ScrollView style={styles.container}>
+      <Animatable.View animation="fadeIn" duration={1000}>
+        <Text variant="headlineSmall" style={styles.title}>
+          Reservar Servicio
+        </Text>
+
+        {pets.length > 0 ? (
+          <View>
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Selecciona tu mascota
+            </Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+              {pets.map(pet => (
+                <Card
+                  key={pet.id}
+                  style={[
+                    styles.petCard,
+                    selectedPet === pet.id && styles.selectedPetCard
+                  ]}
+                  onPress={() => setSelectedPet(pet.id)}
+                >
+                  <Card.Content>
+                    <Text variant="titleMedium">{pet.nombre}</Text>
+                    <Text variant="bodySmall">{pet.especie}</Text>
+                  </Card.Content>
+                </Card>
+              ))}
+            </ScrollView>
+
+            <Text variant="titleMedium" style={styles.sectionTitle}>
+              Tipo de Servicio
+            </Text>
+            <SegmentedButtons
+              value={serviceType}
+              onValueChange={setServiceType}
+              buttons={serviceTypes.map(type => ({
+                value: type.value,
+                label: type.label,
+              }))}
+            />
+
+            <Button
+              mode="contained"
+              onPress={() => setShowDateModal(true)}
+              style={styles.dateButton}
+            >
+              {date.toLocaleDateString('es-ES', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </Button>
+
+            <DatePickerModal />
+
+            <TextInput
+              label="Notas adicionales"
+              value={notes}
+              onChangeText={setNotes}
+              multiline
+              numberOfLines={4}
+              mode="outlined"
+              style={styles.notesInput}
+            />
+
+            <Button
+              mode="contained"
+              onPress={handleBookService}
+              loading={loading}
+              disabled={loading || !selectedPet || !serviceType || !date}
+              style={styles.bookButton}
+            >
+              Reservar Servicio
+            </Button>
+          </View>
+        ) : (
+          <View style={styles.emptyContainer}>
+            <Text variant="bodyLarge" style={styles.emptyText}>
+              No tienes mascotas registradas
+            </Text>
+            <Button
+              mode="contained"
+              onPress={() => navigation.navigate('PetRegister')}
+              style={styles.registerPetButton}
+            >
+              Registrar Mascota
+            </Button>
+          </View>
+        )}
+      </Animatable.View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 16,
   },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 30,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  headerContent: {
-    alignItems: 'center',
-  },
-  headerText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  headerSubtext: {
-    color: '#fff',
-    opacity: 0.9,
-  },
-  content: {
-    flex: 1,
-    padding: 20,
+  title: {
+    textAlign: 'center',
+    marginBottom: 24,
   },
   sectionTitle: {
-    marginBottom: 10,
-    fontWeight: 'bold',
+    marginVertical: 16,
   },
-  segmentedButton: {
-    marginBottom: 20,
+  petCard: {
+    marginRight: 12,
+    minWidth: 120,
   },
-  input: {
-    marginBottom: 15,
-    backgroundColor: 'transparent',
+  selectedPetCard: {
+    backgroundColor: '#e8f5e9',
   },
-  button: {
-    marginTop: 20,
-    marginBottom: 30,
-    borderRadius: 30,
+  dateButton: {
+    marginVertical: 16,
   },
-  buttonContent: {
-    height: 48,
+  notesInput: {
+    marginVertical: 16,
   },
-  serviceDetailCard: {
-    flexDirection: 'row',
+  bookButton: {
+    marginTop: 24,
+  },
+  emptyContainer: {
     alignItems: 'center',
-    padding: 15,
-    marginBottom: 20,
+    marginTop: 40,
+  },
+  emptyText: {
+    marginBottom: 16,
+  },
+  registerPetButton: {
+    width: '100%',
+  },
+  modalContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    margin: 20,
     borderRadius: 10,
+    maxHeight: '80%',
   },
-  serviceDetailContent: {
-    marginLeft: 15,
+  datePickerContainer: {
+    flex: 1,
   },
-  serviceDetailTitle: {
-    fontWeight: 'bold',
+  modalTitle: {
+    textAlign: 'center',
+    marginBottom: 20,
   },
-  serviceDetailPrice: {
-    fontWeight: 'bold',
-    marginTop: 5,
+  dateOption: {
+    marginVertical: 5,
+  },
+  closeButton: {
+    marginTop: 10,
   },
 });

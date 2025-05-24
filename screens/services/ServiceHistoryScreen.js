@@ -1,152 +1,143 @@
-import React from 'react';
-import { StyleSheet, View, ScrollView } from 'react-native';
-import { Text, Surface, useTheme, Card, Avatar, Chip } from 'react-native-paper';
+import React, { useState, useEffect } from 'react';
+import { StyleSheet, View, ScrollView, Alert } from 'react-native';
+import { Text, Card, useTheme, ActivityIndicator } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
-
-const ServiceCard = ({ servicio, fecha, mascota, estado, precio }) => {
-  const theme = useTheme();
-  const getStatusColor = () => {
-    switch (estado) {
-      case 'Completado':
-        return '#4CAF50';
-      case 'Pendiente':
-        return '#FFC107';
-      case 'Cancelado':
-        return '#F44336';
-      default:
-        return theme.colors.primary;
-    }
-  };
-
-  return (
-    <Animatable.View animation="fadeInUp" duration={800}>
-      <Card style={styles.card}>
-        <Card.Content>
-          <View style={styles.cardHeader}>
-            <View style={styles.serviceInfo}>
-              <Text variant="titleMedium" style={styles.serviceTitle}>{servicio}</Text>
-              <Text variant="bodyMedium" style={styles.date}>{fecha}</Text>
-            </View>
-            <Chip
-              style={[styles.statusChip, { backgroundColor: getStatusColor() + '20' }]}
-              textStyle={{ color: getStatusColor() }}
-            >
-              {estado}
-            </Chip>
-          </View>
-          <View style={styles.petInfo}>
-            <Avatar.Icon size={40} icon="paw" style={{ backgroundColor: theme.colors.primary + '20' }} />
-            <Text variant="bodyMedium" style={styles.petName}>{mascota}</Text>
-            <Text variant="titleMedium" style={styles.price}>${precio}</Text>
-          </View>
-        </Card.Content>
-      </Card>
-    </Animatable.View>
-  );
-};
+import { useAuth } from '../../context/AuthContext';
+import { supabase } from '../../config/supabase';
 
 export default function ServiceHistoryScreen() {
   const theme = useTheme();
+  const { user } = useAuth();
+  const [services, setServices] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let subscription;
+
+    const loadServices = async () => {
+      try {
+        // Cargar servicios con información de las mascotas
+        const { data, error } = await supabase
+          .from('services')
+          .select(`
+            *,
+            pets (
+              nombre,
+              especie,
+              raza
+            )
+          `)
+          .eq('user_id', user.id)
+          .order('fecha', { ascending: false });
+
+        if (error) throw error;
+        setServices(data || []);
+
+        // Suscribirse a cambios en tiempo real
+        subscription = supabase
+          .channel('services')
+          .on('postgres_changes', 
+            { 
+              event: '*', 
+              schema: 'public', 
+              table: 'services',
+              filter: `user_id=eq.${user.id}`
+            },
+            payload => {
+              if (payload.eventType === 'INSERT') {
+                setServices(current => [payload.new, ...current]);
+              } else if (payload.eventType === 'DELETE') {
+                setServices(current => 
+                  current.filter(service => service.id !== payload.old.id)
+                );
+              } else if (payload.eventType === 'UPDATE') {
+                setServices(current => 
+                  current.map(service => 
+                    service.id === payload.new.id ? payload.new : service
+                  )
+                );
+              }
+            }
+          )
+          .subscribe();
+
+      } catch (error) {
+        console.error('Error al cargar servicios:', error);
+        Alert.alert('Error', 'No se pudieron cargar los servicios');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadServices();
+
+    return () => {
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
+    };
+  }, [user]);
+
+  if (loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color={theme.colors.primary} />
+      </View>
+    );
+  }
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
-      <Surface style={[styles.header, { backgroundColor: theme.colors.primary }]} elevation={4}>
-        <Animatable.View animation="fadeInDown" duration={1000} style={styles.headerContent}>
-          <Text variant="headlineMedium" style={styles.headerText}>
-            Historial de Servicios
+    <ScrollView style={styles.container}>
+      <Animatable.View animation="fadeIn" duration={1000}>
+        {services.length > 0 ? (
+          services.map(service => (
+            <Card key={service.id} style={styles.card}>
+              <Card.Content>
+                <Text variant="titleMedium">
+                  {service.pets?.nombre || 'Mascota no disponible'}
+                </Text>
+                <Text variant="bodyMedium">
+                  Servicio: {service.tipo_servicio}
+                </Text>
+                <Text variant="bodyMedium">
+                  Fecha: {new Date(service.fecha).toLocaleDateString()}
+                </Text>
+                <Text variant="bodyMedium">
+                  Estado: {service.estado}
+                </Text>
+                {service.notas && (
+                  <Text variant="bodySmall">
+                    Notas: {service.notas}
+                  </Text>
+                )}
+              </Card.Content>
+            </Card>
+          ))
+        ) : (
+          <Text style={styles.emptyText}>
+            No hay servicios registrados
           </Text>
-          <Text variant="titleMedium" style={styles.headerSubtext}>
-            Tus reservas y servicios
-          </Text>
-        </Animatable.View>
-      </Surface>
-
-      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
-        <ServiceCard
-          servicio="Paseo"
-          fecha="03 Mayo 2025"
-          mascota="Luna"
-          estado="Completado"
-          precio="15.00"
-        />
-        <ServiceCard
-          servicio="Veterinario"
-          fecha="05 Mayo 2025"
-          mascota="Michi"
-          estado="Pendiente"
-          precio="35.00"
-        />
-        <ServiceCard
-          servicio="Cuidado Diario"
-          fecha="01 Mayo 2025"
-          mascota="Luna"
-          estado="Completado"
-          precio="25.00"
-        />
-      </ScrollView>
-    </View>
+        )}
+      </Animatable.View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    padding: 16,
   },
-  header: {
-    paddingTop: 60,
-    paddingBottom: 30,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-  },
-  headerContent: {
-    alignItems: 'center',
-  },
-  headerText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    marginBottom: 8,
-  },
-  headerSubtext: {
-    color: '#fff',
-    opacity: 0.9,
-  },
-  content: {
+  loadingContainer: {
     flex: 1,
-    padding: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   card: {
-    marginBottom: 15,
-    borderRadius: 15,
+    marginBottom: 16,
   },
-  cardHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'flex-start',
-    marginBottom: 15,
-  },
-  serviceInfo: {
-    flex: 1,
-  },
-  serviceTitle: {
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  date: {
-    opacity: 0.7,
-  },
-  statusChip: {
-    borderRadius: 15,
-  },
-  petInfo: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  petName: {
-    marginLeft: 10,
-    flex: 1,
-  },
-  price: {
-    fontWeight: 'bold',
+  emptyText: {
+    textAlign: 'center',
+    marginTop: 20,
   },
 });

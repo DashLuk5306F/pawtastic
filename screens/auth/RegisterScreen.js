@@ -1,209 +1,182 @@
 import React, { useState } from 'react';
-import { StyleSheet, View, ScrollView, Dimensions } from 'react-native';
-import { TextInput, Button, Text, Surface, useTheme, Snackbar } from 'react-native-paper';
+import { StyleSheet, View, ScrollView, Alert } from 'react-native';
+import { TextInput, Button, Text, useTheme, HelperText } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
-import { authService } from '../../services/authService';
-
-const { width } = Dimensions.get('window');
+import { supabaseAuthService } from '../../services/supabaseAuthService';
 
 export default function RegisterScreen({ navigation }) {
+  const theme = useTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const theme = useTheme();
+  const [secureTextEntry, setSecureTextEntry] = useState(true);
+  const [secureConfirmTextEntry, setSecureConfirmTextEntry] = useState(true);
+  const [error, setError] = useState('');
 
   const handleRegister = async () => {
-    if (password !== confirmPassword) {
-      setError('Las contraseñas no coinciden');
-      return;
-    }
-
-    if (!email || !password) {
-      setError('Por favor, completa todos los campos');
-      return;
-    }
-
-    setLoading(true);
     try {
-      const idDoc = await authService.register(email, password, {
-        email,
-        createdAt: new Date(),
-      });
-      navigation.replace('PersonalInfo', { userId: idDoc.id });
-    } catch (err) {
-      let errorMessage = 'Error al registrar el usuario';
-      if (err.code === 'auth/email-already-in-use') {
-        errorMessage = 'Este email ya está registrado';
-      } else if (err.code === 'auth/invalid-email') {
-        errorMessage = 'Email inválido';
-      } else if (err.code === 'auth/weak-password') {
-        errorMessage = 'La contraseña debe tener al menos 6 caracteres';
+      setError('');
+      setLoading(true);
+
+      // Validaciones básicas
+      if (!email || !password || !confirmPassword) {
+        setError('Por favor, completa todos los campos');
+        return;
       }
-      setError(errorMessage);
+
+      if (password !== confirmPassword) {
+        setError('Las contraseñas no coinciden');
+        return;
+      }
+
+      // Intentar registro
+      await supabaseAuthService.register(email, password, {
+        email: email,
+        created_at: new Date().toISOString(),
+      });
+      
+      Alert.alert(
+        'Registro exitoso',
+        'Tu cuenta ha sido creada. Por favor, completa tu información personal.',
+        [
+          {
+            text: 'Continuar',
+            onPress: () => navigation.navigate('PersonalInfo'),
+          },
+        ]
+      );
+    } catch (error) {
+      console.error('Error en registro:', error);
+      
+      // Manejar diferentes tipos de errores
+      if (error.message.includes('Email')) {
+        setError('El correo electrónico no es válido');
+      } else if (error.message.includes('contraseña')) {
+        setError('La contraseña debe tener al menos 6 caracteres');
+      } else if (error.message.includes('already')) {
+        setError('Este correo electrónico ya está registrado');
+      } else {
+        setError('Error al crear la cuenta. Por favor, intenta de nuevo.');
+      }
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: theme.colors.primary }]}>
+    <ScrollView contentContainerStyle={styles.container}>
       <Animatable.View 
-        animation="fadeInDown"
-        duration={500}
-        style={styles.header}
+        animation="fadeInUp" 
+        duration={1000} 
+        style={styles.formContainer}
       >
-        <Animatable.Image
-          animation="bounceIn"
-          delay={500}
-          duration={500}
-          source={require('../../assets/app-icon.png')}
-          style={styles.logo}
-          resizeMode="contain"
-        />
-        <Text variant="displaySmall" style={styles.headerText}>
+        <Text variant="headlineMedium" style={styles.title}>
           Crear Cuenta
         </Text>
+
+        {error ? (
+          <Text style={styles.errorText}>{error}</Text>
+        ) : null}
+
+        <TextInput
+          label="Correo electrónico"
+          value={email}
+          onChangeText={(text) => {
+            setEmail(text);
+            setError('');
+          }}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          mode="outlined"
+          style={styles.input}
+        />
+
+        <TextInput
+          label="Contraseña"
+          value={password}
+          onChangeText={(text) => {
+            setPassword(text);
+            setError('');
+          }}
+          secureTextEntry={secureTextEntry}
+          mode="outlined"
+          style={styles.input}
+          right={
+            <TextInput.Icon
+              icon={secureTextEntry ? 'eye' : 'eye-off'}
+              onPress={() => setSecureTextEntry(!secureTextEntry)}
+            />
+          }
+        />
+
+        <TextInput
+          label="Confirmar Contraseña"
+          value={confirmPassword}
+          onChangeText={(text) => {
+            setConfirmPassword(text);
+            setError('');
+          }}
+          secureTextEntry={secureConfirmTextEntry}
+          mode="outlined"
+          style={styles.input}
+          right={
+            <TextInput.Icon
+              icon={secureConfirmTextEntry ? 'eye' : 'eye-off'}
+              onPress={() => setSecureConfirmTextEntry(!secureConfirmTextEntry)}
+            />
+          }
+        />
+
+        <HelperText type="info" visible={true}>
+          La contraseña debe tener al menos 6 caracteres
+        </HelperText>
+
+        <Button
+          mode="contained"
+          onPress={handleRegister}
+          loading={loading}
+          disabled={loading}
+          style={styles.button}
+        >
+          Registrarse
+        </Button>
+
+        <Button
+          mode="text"
+          onPress={() => navigation.navigate('Login')}
+          style={styles.button}
+        >
+          ¿Ya tienes cuenta? Inicia sesión
+        </Button>
       </Animatable.View>
-
-      <Animatable.View 
-        animation="fadeInUpBig" 
-        duration={500} 
-        style={styles.footer}
-      >
-        <Surface style={styles.surface} elevation={2}>
-          <ScrollView showsVerticalScrollIndicator={false}>
-            <TextInput
-              label="Email"
-              value={email}
-              onChangeText={setEmail}
-              mode="outlined"
-              left={<TextInput.Icon icon="email" />}
-              keyboardType="email-address"
-              autoCapitalize="none"
-              style={styles.input}
-            />
-
-            <TextInput
-              label="Contraseña"
-              value={password}
-              onChangeText={setPassword}
-              mode="outlined"
-              left={<TextInput.Icon icon="lock" />}
-              right={
-                <TextInput.Icon 
-                  icon={showPassword ? "eye-off" : "eye"} 
-                  onPress={() => setShowPassword(!showPassword)}
-                />
-              }
-              secureTextEntry={!showPassword}
-              style={styles.input}
-            />
-
-            <TextInput
-              label="Confirmar contraseña"
-              value={confirmPassword}
-              onChangeText={setConfirmPassword}
-              mode="outlined"
-              left={<TextInput.Icon icon="lock" />}
-              right={
-                <TextInput.Icon 
-                  icon={showConfirmPassword ? "eye-off" : "eye"} 
-                  onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                />
-              }
-              secureTextEntry={!showConfirmPassword}
-              style={styles.input}
-            />
-
-            <Button
-              mode="contained"
-              onPress={handleRegister}
-              style={styles.button}
-              contentStyle={styles.buttonContent}
-              labelStyle={styles.buttonLabel}
-              loading={loading}
-            >
-              Registrarse
-            </Button>
-
-            <Button
-              mode="text"
-              onPress={() => navigation.replace('Login')}
-              style={styles.loginButton}
-              labelStyle={[styles.buttonLabel, { color: theme.colors.primary }]}
-            >
-              ¿Ya tienes cuenta? Inicia sesión
-            </Button>
-          </ScrollView>
-        </Surface>
-      </Animatable.View>
-
-      <Snackbar
-        visible={!!error}
-        onDismiss={() => setError('')}
-        action={{
-          label: 'OK',
-          onPress: () => setError(''),
-        }}
-      >
-        {error}
-      </Snackbar>
-    </View>
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    flex: 1,
-  },
-  header: {
-    flex: 1,
+    flexGrow: 1,
     justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 20,
+    padding: 20,
   },
-  logo: {
-    width: width * 0.3,
-    height: width * 0.3,
-    tintColor: '#ffffff',
-    marginBottom: 20,
+  formContainer: {
+    width: '100%',
   },
-  headerText: {
-    color: '#fff',
+  title: {
     textAlign: 'center',
-  },
-  footer: {
-    flex: 3,
-  },
-  surface: {
-    flex: 1,
-    backgroundColor: '#fff',
-    borderTopLeftRadius: 30,
-    borderTopRightRadius: 30,
-    paddingHorizontal: 20,
-    paddingTop: 30,
+    marginBottom: 20,
   },
   input: {
     marginBottom: 16,
-    backgroundColor: 'transparent',
   },
   button: {
     marginTop: 10,
-    marginHorizontal: 30,
     borderRadius: 30,
   },
-  buttonContent: {
-    height: 48,
-  },
-  buttonLabel: {
-    fontSize: 16,
-    letterSpacing: 0.5,
-  },
-  loginButton: {
-    marginTop: 20,
+  errorText: {
+    color: 'red',
+    marginBottom: 10,
+    textAlign: 'center',
   },
 });

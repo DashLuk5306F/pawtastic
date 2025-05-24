@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { StyleSheet, View, ScrollView, ActivityIndicator } from 'react-native';
-import { Text, Surface, useTheme, Card, Button, Avatar, IconButton } from 'react-native-paper';
+import { StyleSheet, View, ScrollView, Alert } from 'react-native';
+import { Text, Card, Button, useTheme, FAB } from 'react-native-paper';
 import * as Animatable from 'react-native-animatable';
 import { useAuth } from '../../context/AuthContext';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../../config/firebase';
+import { supabase } from '../../config/supabase';
 
 const PetCard = ({ pet, onEdit, onDelete }) => {
   const tipoIcono = pet.tipo === 'perro' ? 'dog' : (pet.tipo === 'gato' ? 'cat' : 'paw');
@@ -46,46 +45,80 @@ export default function MyPetsScreen({ navigation }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchPets = async () => {
-      if (!user?.uid) {
-        setLoading(false);
-        return;
-      }
+    let subscription;
 
+    const loadPets = async () => {
       try {
-        const userDocRef = doc(db, 'users', user.uid);
-        const userDoc = await getDoc(userDocRef);
+        // Cargar mascotas inicialmente
+        const { data, error } = await supabase
+          .from('pets')
+          .select('*')
+          .eq('owner_id', user.id)
+          .order('created_at', { ascending: false });
 
-        if (userDoc.exists() && userDoc.data().pets) {
-          setPets(userDoc.data().pets);
-        } else {
-          setPets([]);
-        }
+        if (error) throw error;
+        setPets(data || []);
+
+        // Suscribirse a cambios en tiempo real
+        subscription = supabase
+          .channel('pets')
+          .on('postgres_changes', 
+            { 
+              event: '*', 
+              schema: 'public', 
+              table: 'pets',
+              filter: `owner_id=eq.${user.id}`
+            },
+            payload => {
+              if (payload.eventType === 'INSERT') {
+                setPets(current => [payload.new, ...current]);
+              } else if (payload.eventType === 'DELETE') {
+                setPets(current => current.filter(pet => pet.id !== payload.old.id));
+              } else if (payload.eventType === 'UPDATE') {
+                setPets(current => 
+                  current.map(pet => 
+                    pet.id === payload.new.id ? payload.new : pet
+                  )
+                );
+              }
+            }
+          )
+          .subscribe();
+
       } catch (error) {
-        console.error('Error al obtener mascotas:', error);
-        setPets([]);
+        console.error('Error al cargar mascotas:', error);
+        Alert.alert('Error', 'No se pudieron cargar las mascotas');
       } finally {
         setLoading(false);
       }
     };
 
-    fetchPets();
+    loadPets();
 
-    // Agregar un listener para recargar los datos cuando regresemos a esta pantalla
-    const unsubscribe = navigation.addListener('focus', fetchPets);
-    return unsubscribe;
-  }, [user, navigation]);
+    return () => {
+      if (subscription) {
+        supabase.removeChannel(subscription);
+      }
+    };
+  }, [user]);
+
+  const handleDeletePet = async (petId) => {
+    try {
+      const { error } = await supabase
+        .from('pets')
+        .delete()
+        .eq('id', petId);
+
+      if (error) throw error;
+    } catch (error) {
+      console.error('Error al eliminar mascota:', error);
+      Alert.alert('Error', 'No se pudo eliminar la mascota');
+    }
+  };
 
   const handleEditPet = (pet) => {
     // Navegamos a la pantalla de edición con los datos de la mascota
     navigation.navigate('PetRegister', { petData: pet, isEditing: true });
-  };
-
-  const handleDeletePet = (pet) => {
-    // Aquí implementarías la lógica para eliminar una mascota
-    alert('Función para eliminar mascota: ' + pet.nombre);
-    
-    // Implementación pendiente
   };
 
   if (loading) {
